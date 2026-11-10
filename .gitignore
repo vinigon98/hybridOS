@@ -1,0 +1,10 @@
+# HybridOS gitignore
+target/
+*.img
+*.bin
+*.fd
+*.exe
+*.msi
+*.7z
+qemu/bin/
+tools/

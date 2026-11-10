@@ -1,0 +1,9 @@
+[package]
+name = "hybridos-kernel"
+version = "0.1.0"
+edition = "2021"
+authors = ["Vinicius", "NexusCore"]
+description = "A proprietary dual-personality hybrid kernel running Windows and Linux binaries/drivers side-by-side"
+
+[dependencies]
+# Standard library is used for the user-mode execution host and validation testbed
