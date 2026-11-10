@@ -16,6 +16,7 @@ pub mod userland;
 pub mod graphics;
 pub mod net;
 pub mod storage;
+pub mod frontend;
 
 use std::sync::Arc;
 use personality::ExecutionPersonality;
