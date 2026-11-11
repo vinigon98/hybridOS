@@ -9,6 +9,14 @@
 //!
 //! Designed for the Windows 11 Fluent Design System, DWM integration, and headless kernel validation.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::HashMap;
 use std::fmt;
 

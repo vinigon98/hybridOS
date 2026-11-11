@@ -1,5 +1,13 @@
 //! Windows NT System Service Dispatch Table (SSDT) in Rust.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use crate::process::{HybridProcess, KernelObject, ObjectType};
 use crate::types::{NtStatus, Handle};
 

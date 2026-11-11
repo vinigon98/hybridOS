@@ -19,6 +19,14 @@
 //! - **Fluent Design Integration**: Full view-model generation for Windows 11 Fluent Design cards,
 //!   interactive toggles, navigation routes (`ms-settings:network-*`), and status headers.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr};

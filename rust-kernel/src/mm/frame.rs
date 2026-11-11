@@ -4,7 +4,16 @@
 //! Tracks free and allocated physical frames, supporting single-frame and contiguous
 //! physical allocations for kernel pages, page tables, and DMA buffers.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use core::fmt;
+use alloc::vec;
 
 /// Standard page frame size for x86_64 architecture (4 Kilobytes).
 pub const PAGE_SIZE: usize = 4096;
@@ -204,7 +213,7 @@ impl fmt::Display for FrameError {
     }
 }
 
-impl std::error::Error for FrameError {}
+
 
 /// Bitmap-based Physical Page Frame Allocator.
 ///

@@ -7,6 +7,14 @@
 //! - [`FileDescriptor`]: Open file instance with per-handle offset and flags.
 //! - [`FileOperations`]: Trait for filesystem driver operations.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::fmt;

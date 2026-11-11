@@ -7,6 +7,14 @@
 //! - Internet Control Message Protocol (ICMP) and ping handling (`icmp`)
 //! - Network interface abstraction, packet dispatcher, and `init_net()`
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 pub mod ethernet;
 pub mod arp;
 pub mod ipv4;
@@ -14,6 +22,9 @@ pub mod icmp;
 pub mod udp;
 pub mod tcp;
 pub mod socket;
+pub mod filter;
+
+pub use crate::compat::net::*;
 
 use std::collections::VecDeque;
 use std::sync::{Mutex, OnceLock};
@@ -46,6 +57,9 @@ pub use tcp::{
 pub use socket::{
     AddressFamily, RingBuffer, ShutdownHow, Socket, SocketAddress, SocketError, SocketFileOps,
     SocketProtocol, SocketRegistry, SocketState, SocketType, FIONBIO, FIONREAD,
+};
+pub use filter::{
+    global_network_filter, FilterVerdict, NetworkFilterContext, NetworkFilterHook, NetworkFilterOp,
 };
 
 /// Network interface operational statistics.

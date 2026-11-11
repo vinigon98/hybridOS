@@ -1,3 +1,11 @@
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use crate::drivers::vdm::{WdmDriver, LinuxDriver, Irp};
 use crate::types::{NtStatus, PosixError};
 

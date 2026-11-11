@@ -1,0 +1,12 @@
+[package]
+name = "hyav-worker"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "HybridOS Anti-Virus Worker Inspection Engine (YARA-compatible matching, Shannon entropy, Threat Classifier)"
+
+[dependencies]
+
+[dev-dependencies]

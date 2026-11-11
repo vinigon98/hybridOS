@@ -9,6 +9,14 @@
 //! - Active / Passive Connection Establishment (3-Way Handshake)
 //! - Graceful Teardown & Reset (RST) Handling
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::{BTreeMap, VecDeque};
 use std::fmt;
 

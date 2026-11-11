@@ -8,6 +8,14 @@
 //! - [`path`]: Unified Path Resolver mapping Unix and Windows NT paths.
 //! - [`ramfs`]: In-memory filesystem implementation.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 pub mod inode;
 pub mod path;
 pub mod ramfs;

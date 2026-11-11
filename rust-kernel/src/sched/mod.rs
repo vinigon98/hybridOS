@@ -4,6 +4,14 @@
 //! cooperative yielding, sleep timer management, and process/thread lifecycle tracking
 //! for hybrid Windows NT and Linux POSIX execution.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 pub mod task;
 pub mod scheduler;
 

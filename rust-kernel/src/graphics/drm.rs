@@ -18,6 +18,14 @@
 //!   - `DRM_IOCTL_GEM_CLOSE`
 //!   - `DRM_IOCTL_MODE_CREATE_DUMB`, `DRM_IOCTL_MODE_MAP_DUMB`, `DRM_IOCTL_MODE_DESTROY_DUMB`
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use super::kms::{KmsSubsystem, KmsError, DisplayMode};

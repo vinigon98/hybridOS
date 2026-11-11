@@ -1,5 +1,13 @@
 //! x86_64 CPU Trap Frame and calling convention register representations.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 #[derive(Debug, Default, Clone)]
 #[repr(C)]
 pub struct TrapFrame {

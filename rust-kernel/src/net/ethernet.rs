@@ -3,6 +3,14 @@
 //! Implements IEEE 802.3 / Ethernet II frame serialization, parsing,
 //! payload packing/unpacking, and 48-bit MAC address abstractions.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::fmt;
 
 /// Length of an Ethernet MAC address in bytes.

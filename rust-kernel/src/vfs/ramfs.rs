@@ -8,6 +8,14 @@
 //! - Character devices (`/dev/null`, `/dev/zero`, `/dev/console`).
 //! - Case-insensitive lookup fallback for Windows NT personality compatibility.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock, Weak};

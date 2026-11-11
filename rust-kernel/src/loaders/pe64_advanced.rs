@@ -5,6 +5,14 @@
 //! kernel32/ntdll stub resolvers, and complete Thread/Process Environment Block
 //! (TEB/PEB) context synthesis for Windows NT user-mode process execution.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::HashMap;
 use std::fmt;
 use crate::process::HybridProcess;

@@ -1,0 +1,12 @@
+[package]
+name = "hyav-vfs-gate"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "HyAV Kernel VFS Gate: Lockless IPC rings, zero-copy MDL projection, and NT/POSIX interception"
+
+[dependencies]
+
+[dev-dependencies]

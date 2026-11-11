@@ -237,20 +237,36 @@ impl GlobalDescriptorTable {
     }
 
     /// Loads this GDT into the CPU and updates segment registers.
-    /// In user-mode host testing, simulates the load without executing privileged instructions.
     pub fn load(&'static self) {
         let ptr = self.pointer();
-        #[cfg(target_arch = "x86_64")]
-        {
-            // If running bare-metal:
-            // unsafe {
-            //     core::arch::asm!("lgdt [{}]", in(reg) &ptr, options(readonly, nostack, preserves_flags));
-            //     core::arch::asm!("push 0x08; lea rax, [rip + 1f]; push rax; lretq; 1:", options(nostack));
-            //     core::arch::asm!("mov ds, ax; mov es, ax; mov ss, ax; mov fs, ax; mov gs, ax", in("ax") 0x10u16);
-            //     core::arch::asm!("ltr ax", in("ax") 0x28u16);
-            // }
+        unsafe {
+            // Load the GDT descriptor
+            core::arch::asm!("lgdt [{}]", in(reg) &ptr, options(readonly, nostack, preserves_flags));
+
+            // Reload CS by far return
+            core::arch::asm!(
+                "push 0x08",
+                "lea rax, [rip + 2f]",
+                "push rax",
+                "retfq",
+                "2:",
+                options(nostack)
+            );
+
+            // Reload data segment registers with KERNEL_DS (0x10)
+            core::arch::asm!(
+                "mov ds, ax",
+                "mov es, ax",
+                "mov ss, ax",
+                "mov fs, ax",
+                "mov gs, ax",
+                in("ax") 0x10u16,
+                options(nostack)
+            );
+
+            // Load Task Register (TSS selector = 0x28)
+            core::arch::asm!("ltr ax", in("ax") 0x28u16, options(nostack));
         }
-        let _ = ptr;
     }
 
     /// Returns the raw entries of the GDT.

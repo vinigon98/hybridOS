@@ -7,6 +7,14 @@
 //! 4. Framebuffer / Display GOP (Graphics Output Protocol) Driver
 //! 5. Keyboard PS/2 Input Ring-Buffer Driver
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
 use crate::drivers::vdm::{WdmDriver, LinuxDriver, Irp};

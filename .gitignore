@@ -1,5 +1,6 @@
 # HybridOS gitignore
 target/
+**/target/
 *.img
 *.bin
 *.fd
@@ -8,3 +9,7 @@ target/
 *.7z
 qemu/bin/
 tools/
+reactos-ref/
+qemu/7zextra/
+
+

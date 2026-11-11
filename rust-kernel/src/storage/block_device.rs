@@ -6,6 +6,14 @@
 //! - [`BlockDeviceRegistry`]: Thread-safe dynamic registry with global singleton access.
 //! - [`RamBlockDevice`]: Memory-backed block device reference implementation.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::sync::{Arc, RwLock, OnceLock};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::collections::HashMap;

@@ -3,6 +3,14 @@
 //! Provides cooperative and preemptive scheduling, dynamic priority boosting and decay,
 //! sleep timers, and lifecycle management for dual-personality processes and threads.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use crate::personality::ExecutionPersonality;

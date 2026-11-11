@@ -22,6 +22,14 @@
 //!   - `sys_rt_sigreturn` (15): Restore user CPU frame and signal mask from signal stack.
 //!   - `sys_kill` (62): Send signal to process by PID or process group.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex, OnceLock};
 

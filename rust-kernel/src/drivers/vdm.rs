@@ -1,6 +1,14 @@
 //! Vortex Driver Model (VDM) Subsystem in Rust.
 //! Unifies Windows WDM IRP-based drivers and Linux file_operations drivers.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::types::{NtStatus, PosixError};

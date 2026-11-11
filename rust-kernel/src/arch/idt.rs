@@ -7,7 +7,7 @@
 //!   - Vector 0x80: Linux POSIX syscall interrupt gate
 //!   - Vector 0x2E: Windows NT syscall interrupt gate
 
-use std::mem::size_of;
+use core::mem::size_of;
 use crate::arch::gdt::KERNEL_CS;
 use crate::serial_println;
 
@@ -183,14 +183,9 @@ impl InterruptDescriptorTable {
     /// Loads this IDT into the CPU register (`LIDT`).
     pub fn load(&'static self) {
         let ptr = self.pointer();
-        #[cfg(target_arch = "x86_64")]
-        {
-            // Bare-metal hardware load:
-            // unsafe {
-            //     core::arch::asm!("lidt [{}]", in(reg) &ptr, options(readonly, nostack, preserves_flags));
-            // }
+        unsafe {
+            core::arch::asm!("lidt [{}]", in(reg) &ptr, options(readonly, nostack, preserves_flags));
         }
-        let _ = ptr;
     }
 }
 

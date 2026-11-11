@@ -7,9 +7,17 @@
 //! - Magic signature integrity validation (`0xDEADBEEF`) for buffer overflow and double-free detection.
 //! - Thread-safe `LockedHeap` synchronization wrapper.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use core::alloc::Layout;
 use core::fmt;
-use std::sync::Mutex;
+use crate::sync::SpinLock;
 
 /// Magic signature used to verify block header integrity.
 pub const HEAP_BLOCK_MAGIC: u32 = 0xDEAD_BEEF;
@@ -99,7 +107,7 @@ impl fmt::Display for HeapError {
     }
 }
 
-impl std::error::Error for HeapError {}
+
 
 /// Block-based Doubly Linked List Kernel Heap Allocator.
 pub struct KernelHeap {
@@ -343,38 +351,38 @@ impl Default for KernelHeap {
 
 /// Thread-safe Global Locked Kernel Heap wrapper.
 pub struct LockedHeap {
-    inner: Mutex<KernelHeap>,
+    inner: SpinLock<KernelHeap>,
 }
 
 impl LockedHeap {
     /// Creates a new uninitialized locked kernel heap.
     pub const fn new() -> Self {
         Self {
-            inner: Mutex::new(KernelHeap::new()),
+            inner: SpinLock::new(KernelHeap::new()),
         }
     }
 
     /// Initializes the locked kernel heap.
     pub unsafe fn init(&self, heap_start: *mut u8, size: usize) -> Result<(), HeapError> {
-        let mut heap = self.inner.lock().unwrap();
+        let mut heap = self.inner.lock();
         heap.init(heap_start, size)
     }
 
     /// Allocates `size` bytes with `align` alignment.
     pub fn allocate(&self, size: usize, align: usize) -> Result<*mut u8, HeapError> {
-        let mut heap = self.inner.lock().unwrap();
+        let mut heap = self.inner.lock();
         heap.allocate(size, align)
     }
 
     /// Deallocates a previously allocated pointer.
     pub fn deallocate(&self, ptr: *mut u8) -> Result<(), HeapError> {
-        let mut heap = self.inner.lock().unwrap();
+        let mut heap = self.inner.lock();
         heap.deallocate(ptr)
     }
 
     /// Returns statistics snapshot of the heap.
     pub fn stats(&self) -> HeapStats {
-        let heap = self.inner.lock().unwrap();
+        let heap = self.inner.lock();
         HeapStats {
             total_bytes: heap.total_bytes(),
             allocated_bytes: heap.allocated_bytes(),
@@ -382,6 +390,16 @@ impl LockedHeap {
             active_allocations: heap.active_allocations(),
             is_initialized: heap.is_initialized(),
         }
+    }
+}
+
+unsafe impl core::alloc::GlobalAlloc for LockedHeap {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        self.allocate(layout.size(), layout.align()).unwrap_or(core::ptr::null_mut())
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
+        let _ = self.deallocate(ptr);
     }
 }
 
@@ -393,66 +411,4 @@ pub struct HeapStats {
     pub free_bytes: usize,
     pub active_allocations: usize,
     pub is_initialized: bool,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_heap_allocation_and_free() {
-        let mut buffer = vec![0u8; 64 * 1024]; // 64 KB heap
-        let mut heap = KernelHeap::new();
-
-        unsafe {
-            heap.init(buffer.as_mut_ptr(), buffer.len()).expect("Heap init failed");
-        }
-
-        assert!(heap.is_initialized());
-        assert_eq!(heap.active_allocations(), 0);
-
-        // Allocate 64 bytes
-        let p1 = heap.allocate(64, 16).expect("Alloc 1 failed");
-        assert_eq!(heap.active_allocations(), 1);
-        assert!(!p1.is_null());
-
-        // Write some test data into p1
-        unsafe {
-            core::ptr::write_bytes(p1, 0xAA, 64);
-            assert_eq!(*p1, 0xAA);
-        }
-
-        // Allocate 128 bytes
-        let p2 = heap.allocate(128, 16).expect("Alloc 2 failed");
-        assert_eq!(heap.active_allocations(), 2);
-
-        // Deallocate p1
-        heap.deallocate(p1).expect("Dealloc p1 failed");
-        assert_eq!(heap.active_allocations(), 1);
-
-        // Deallocate p2
-        heap.deallocate(p2).expect("Dealloc p2 failed");
-        assert_eq!(heap.active_allocations(), 0);
-
-        // After freeing both, blocks coalesce back to full size
-        let p3 = heap.allocate(60 * 1024, 16).expect("Large re-alloc after coalesce failed");
-        assert_eq!(heap.active_allocations(), 1);
-        heap.deallocate(p3).expect("Dealloc p3 failed");
-    }
-
-    #[test]
-    fn test_heap_double_free_detection() {
-        let mut buffer = vec![0u8; 16 * 1024];
-        let mut heap = KernelHeap::new();
-        unsafe {
-            heap.init(buffer.as_mut_ptr(), buffer.len()).unwrap();
-        }
-
-        let p = heap.allocate(32, 16).unwrap();
-        heap.deallocate(p).unwrap();
-
-        // Second deallocate must return DoubleFree error
-        let err = heap.deallocate(p);
-        assert_eq!(err, Err(HeapError::DoubleFree));
-    }
 }

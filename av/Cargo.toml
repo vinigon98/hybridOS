@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = [
+    "hyav-core",
+    "hyav-sigformat",
+    "hyav-vfs-gate",
+    "hyav-worker",
+    "hyav-service",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["HybridOS Core Team"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/HybridOS/HybridOS-Kernel"
+
+[workspace.dependencies]
+# Shared internal crates
+hyav-core = { path = "hyav-core" }
+hyav-sigformat = { path = "hyav-sigformat" }
+hyav-vfs-gate = { path = "hyav-vfs-gate" }
+hyav-worker = { path = "hyav-worker" }
+hyav-service = { path = "hyav-service" }

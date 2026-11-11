@@ -1,0 +1,12 @@
+[package]
+name = "hyav-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "High-throughput Bloom filter and two-level LRU cache for HyAV"
+
+[dependencies]
+
+[dev-dependencies]

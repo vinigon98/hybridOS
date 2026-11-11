@@ -7,6 +7,14 @@
 //! - UTF-16LE partition name decoding
 //! - Image creation and serialization for unit testing and disk provisioning.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::fmt;
 use super::{BlockDevice, StorageError};
 

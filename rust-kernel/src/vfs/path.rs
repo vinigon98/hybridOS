@@ -5,6 +5,14 @@
 //! - Windows NT paths (`C:\Windows\System32\cmd.exe`, `\Device\HarddiskVolume1\Windows`, `\DosDevices\C:\...`)
 //! - NT Object Manager namespaces (`\??\C:\...`, `\SystemRoot\System32`, `\\.\pipe`)
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::RwLock;

@@ -1,5 +1,13 @@
 //! Safe PE32+ (Windows 64-bit Executable) Parser and Loader.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use crate::process::HybridProcess;
 use crate::types::NtStatus;
 

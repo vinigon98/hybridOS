@@ -8,6 +8,14 @@
 
 #![deny(unsafe_code)]
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::HashMap;
 use std::fmt;
 
@@ -784,7 +792,7 @@ impl WindowsPermissions {
 }
 
 /// App capabilities governed by the Windows App Permissions Matrix.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum AppCapability {
     Location,
     Camera,

@@ -10,9 +10,17 @@
 //! - [`Socket`]: Full BSD socket object implementing standard operations.
 //! - [`SocketFileOps`]: Direct bridge integrating sockets into the HybridOS VFS.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::VecDeque;
 use std::fmt;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, RwLock, Weak};
 
 use crate::types::{NtStatus, PosixError};
@@ -20,6 +28,7 @@ use crate::vfs::inode::{FileDescriptor, FileOperations, Inode, InodeType, OpenFl
 use crate::vfs::VfsError;
 use super::udp::{UdpDatagram, UdpSubsystem};
 use super::tcp::TcpConnection;
+use super::filter::{global_network_filter, FilterVerdict, NetworkFilterContext, NetworkFilterOp};
 
 /// Standard BSD Socket Types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -166,7 +175,7 @@ impl From<SocketError> for PosixError {
             SocketError::NotListening => PosixError::EINVAL,
             SocketError::NotConnected => PosixError::ENOTTY,
             SocketError::AlreadyConnected => PosixError::EEXIST,
-            SocketError::ConnectionRefused => PosixError::EACCES,
+            SocketError::ConnectionRefused => PosixError::ECONNREFUSED,
             SocketError::ConnectionReset => PosixError::EIO,
             SocketError::AddressInUse => PosixError::EEXIST,
             SocketError::WouldBlock => PosixError::EAGAIN,
@@ -215,7 +224,7 @@ impl From<SocketError> for VfsError {
 }
 
 /// Standard IPv4 Endpoint Address (IP + Port).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SocketAddress {
     pub ip: [u8; 4],
     pub port: u16,
@@ -367,6 +376,7 @@ pub struct Socket {
     pub local_addr: RwLock<Option<SocketAddress>>,
     pub peer_addr: RwLock<Option<SocketAddress>>,
     pub nonblocking: AtomicBool,
+    pub owner_pid: AtomicU32,
 
     /// Stream transmission and reception circular buffers
     pub rx_buffer: Mutex<RingBuffer>,
@@ -402,6 +412,7 @@ impl Socket {
             local_addr: RwLock::new(None),
             peer_addr: RwLock::new(None),
             nonblocking: AtomicBool::new(false),
+            owner_pid: AtomicU32::new(0),
             rx_buffer: Mutex::new(RingBuffer::new(RingBuffer::DEFAULT_CAPACITY)),
             tx_buffer: Mutex::new(RingBuffer::new(RingBuffer::DEFAULT_CAPACITY)),
             dgram_rx_queue: Mutex::new(VecDeque::new()),
@@ -413,9 +424,31 @@ impl Socket {
         sock
     }
 
+    /// Create a new BSD Socket endpoint associated with a specific process ID.
+    pub fn new_with_pid(
+        family: AddressFamily,
+        sock_type: SocketType,
+        protocol: SocketProtocol,
+        owner_pid: u32,
+    ) -> Arc<Self> {
+        let sock = Self::new(family, sock_type, protocol);
+        sock.set_owner_pid(owner_pid);
+        sock
+    }
+
     // ========================================================================
     // Configuration & Flags
     // ========================================================================
+
+    #[inline]
+    pub fn owner_pid(&self) -> u32 {
+        self.owner_pid.load(Ordering::Relaxed)
+    }
+
+    #[inline]
+    pub fn set_owner_pid(&self, pid: u32) {
+        self.owner_pid.store(pid, Ordering::SeqCst);
+    }
 
     #[inline]
     pub fn is_nonblocking(&self) -> bool {
@@ -445,6 +478,18 @@ impl Socket {
 
     /// Bind socket to local address.
     pub fn bind(&self, addr: SocketAddress) -> Result<(), SocketError> {
+        // Network Filter Hook interception (HyAV M6-1)
+        let ctx = NetworkFilterContext::new(
+            self.owner_pid(),
+            self.protocol,
+            NetworkFilterOp::Bind,
+            Some(addr),
+            None,
+        );
+        if global_network_filter().evaluate(&ctx) == FilterVerdict::Block {
+            return Err(SocketError::ConnectionRefused);
+        }
+
         let mut state = self.state.lock().unwrap();
         if *state != SocketState::Unbound {
             return Err(SocketError::AlreadyBound);
@@ -502,6 +547,20 @@ impl Socket {
         let mut backlog = self.backlog_queue.lock().unwrap();
         if let Some(accepted) = backlog.pop_front() {
             let peer = accepted.peer_address().ok_or(SocketError::NotConnected)?;
+
+            // Network Filter Hook interception (HyAV M6-1)
+            let local = self.local_address();
+            let ctx = NetworkFilterContext::new(
+                self.owner_pid(),
+                self.protocol,
+                NetworkFilterOp::Accept,
+                local,
+                Some(peer),
+            );
+            if global_network_filter().evaluate(&ctx) == FilterVerdict::Block {
+                return Err(SocketError::ConnectionRefused);
+            }
+
             Ok((accepted, peer))
         } else if self.is_nonblocking() {
             Err(SocketError::WouldBlock)
@@ -517,6 +576,19 @@ impl Socket {
 
     /// Connect to remote peer address.
     pub fn connect(self: &Arc<Self>, remote: SocketAddress) -> Result<(), SocketError> {
+        let local = self.local_address();
+        // Network Filter Hook interception (HyAV M6-1)
+        let ctx = NetworkFilterContext::new(
+            self.owner_pid(),
+            self.protocol,
+            NetworkFilterOp::Connect,
+            local,
+            Some(remote),
+        );
+        if global_network_filter().evaluate(&ctx) == FilterVerdict::Block {
+            return Err(SocketError::ConnectionRefused);
+        }
+
         let mut state = self.state.lock().unwrap();
         if *state == SocketState::Connected {
             return Err(SocketError::AlreadyConnected);

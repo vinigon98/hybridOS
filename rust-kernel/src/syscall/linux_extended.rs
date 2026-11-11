@@ -30,6 +30,14 @@
 //!   - `sys_uname` (63): Operating system and hardware architecture identification.
 //!   - `sys_arch_prctl` (158): x86_64 segment base configuration (FS_BASE for TLS, GS_BASE).
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex, OnceLock};
 

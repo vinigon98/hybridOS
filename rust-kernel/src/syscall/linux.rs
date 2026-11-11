@@ -1,5 +1,13 @@
 //! Linux System V AMD64 Syscall Implementation in Rust.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use crate::process::{HybridProcess, KernelObject, ObjectType};
 use crate::types::{PosixError, Handle};
 

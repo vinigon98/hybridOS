@@ -7,6 +7,14 @@
 //! - [`BlockDevice`]: Universal block storage trait implemented for disks, partitions, and RAM disks.
 //! - VFS Integration: Direct mounting of real FAT32 and EXT4 volumes into the unified HybridOS VFS.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 pub mod block_device;
 pub mod nvme;
 pub mod ahci;
@@ -605,6 +613,10 @@ pub fn mount_fat32(
     mount_path: &str,
     device: Arc<dyn BlockDevice>,
 ) -> Result<(), VfsError> {
+    // Phase 1.5 FLTMGR Gate: Pre-Mount hook interception and security coupling
+    let req = crate::fs::VolumeMountRequest::new(1, mount_path, "FAT32", 0);
+    crate::fs::trigger_pre_mount(&req).map_err(|_| VfsError::PermissionDenied)?;
+
     let fs = Arc::new(fat32::Fat32FileSystem::mount(device)?);
     let root_cluster = fs.bpb().root_cluster;
 
@@ -631,6 +643,15 @@ pub fn mount_fat32(
     ));
 
     parent_dir.add_entry(&leaf, mount_inode)?;
+
+    // Dispatch dynamic EVT_VOLUME_MOUNTED notification to minifilters
+    crate::fs::notify_volume_mounted(crate::fs::VolumeMountedEvent::new(
+        1,
+        mount_path,
+        "FAT32",
+        vec![],
+    ));
+
     Ok(())
 }
 
@@ -640,6 +661,10 @@ pub fn mount_ext4(
     mount_path: &str,
     device: Arc<dyn BlockDevice>,
 ) -> Result<(), VfsError> {
+    // Phase 1.5 FLTMGR Gate: Pre-Mount hook interception and security coupling
+    let req = crate::fs::VolumeMountRequest::new(2, mount_path, "EXT4", 0);
+    crate::fs::trigger_pre_mount(&req).map_err(|_| VfsError::PermissionDenied)?;
+
     let fs = Arc::new(ext4::Ext4FileSystem::mount(device)?);
 
     let canon = vfs.resolve_path(mount_path, "/")?;
@@ -664,6 +689,15 @@ pub fn mount_ext4(
     ));
 
     parent_dir.add_entry(&leaf, mount_inode)?;
+
+    // Dispatch dynamic EVT_VOLUME_MOUNTED notification to minifilters
+    crate::fs::notify_volume_mounted(crate::fs::VolumeMountedEvent::new(
+        2,
+        mount_path,
+        "EXT4",
+        vec![],
+    ));
+
     Ok(())
 }
 

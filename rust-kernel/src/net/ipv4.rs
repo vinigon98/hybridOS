@@ -3,6 +3,14 @@
 //! Implements RFC 791 IPv4 protocol, RFC 1071 internet checksum calculation,
 //! and CIDR longest-prefix-match (LPM) routing table.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::fmt;
 
 /// Minimum length of an IPv4 header (IHL = 5, 20 bytes).

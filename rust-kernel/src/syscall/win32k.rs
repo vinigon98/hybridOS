@@ -22,6 +22,14 @@
 //!     NtGdiLineTo (0x101D), NtUserInvalidateRect (0x101E)
 //! - SSDT Dispatch Table: `dispatch_win32k_syscall(proc, service_id, args...)`
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::{Mutex, OnceLock};
 

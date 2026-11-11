@@ -9,6 +9,14 @@
 //! - [`UdpQueue`]: Thread-safe reception and transmission datagram queues.
 //! - [`UdpSubsystem`]: Unified transport coordinator supporting loopback and routing.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::sync::{Arc, Mutex, RwLock};

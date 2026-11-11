@@ -1,0 +1,12 @@
+[package]
+name = "hyav-service"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "HybridOS Anti-Virus Host Security Service & Network Policy Engine"
+
+[dependencies]
+
+[dev-dependencies]

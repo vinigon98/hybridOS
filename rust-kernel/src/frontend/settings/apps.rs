@@ -8,6 +8,14 @@
 
 #![deny(unsafe_code)]
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 
@@ -69,7 +77,7 @@ impl AppInstallSourcePolicy {
 }
 
 /// Granular app permissions managed in Advanced Options.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum AppPermission {
     BackgroundApps,
     Camera,

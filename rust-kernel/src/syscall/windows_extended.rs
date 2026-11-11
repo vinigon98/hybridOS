@@ -7,6 +7,14 @@
 //! - Synchronization (NtCreateEvent, NtSetEvent, NtResetEvent, NtWaitForSingleObject, NtWaitForMultipleObjects)
 //! - System Information & Execution (NtQuerySystemInformation, NtDelayExecution)
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 use std::sync::{Mutex, OnceLock};

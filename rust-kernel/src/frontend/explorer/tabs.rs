@@ -12,6 +12,14 @@
 //! 5. File List & Details View (Columns, Multi-selection Ctrl/Shift/Ctrl+A, Status bar metrics)
 //! 6. Dual-Personality Hybrid Filesystem Provider with realistic directories and file operations
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt;

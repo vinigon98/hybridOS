@@ -4,9 +4,17 @@
 //! page table entry flags (PRESENT, WRITABLE, USER, NO_EXECUTE, etc.),
 //! virtual-to-physical address translation, and virtual memory page mapping.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use core::fmt;
 use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Index, IndexMut};
-use std::collections::HashMap;
+use alloc::collections::BTreeMap;
 
 use crate::mm::frame::{PhysAddr, PhysFrame, BitmapFrameAllocator, PAGE_SIZE, PAGE_MASK, PAGE_SHIFT};
 
@@ -463,7 +471,7 @@ impl fmt::Display for PagingError {
     }
 }
 
-impl std::error::Error for PagingError {}
+
 
 /// Page Table Manager for an Address Space.
 ///
@@ -474,14 +482,14 @@ pub struct PageTableManager {
     /// Physical frame address of the root Level 4 PML4 table (CR3 register value).
     pml4_frame: PhysFrame,
     /// Storage for page tables in this address space, indexed by their physical address.
-    tables: HashMap<PhysAddr, PageTable>,
+    tables: BTreeMap<PhysAddr, PageTable>,
 }
 
 impl PageTableManager {
     /// Initializes a new page table manager, allocating the root PML4 from the given frame allocator.
     pub fn new(allocator: &mut BitmapFrameAllocator) -> Result<Self, PagingError> {
         let pml4_frame = allocator.allocate_frame().ok_or(PagingError::FrameAllocationFailed)?;
-        let mut tables = HashMap::new();
+        let mut tables = BTreeMap::new();
         tables.insert(pml4_frame.start_address(), PageTable::new());
 
         Ok(Self {

@@ -8,6 +8,14 @@
 //! - [`MockAhciController`]: Virtual AHCI host adapter emulating SATA hardware & PHY negotiation.
 //! - [`AhciDevice`]: High-level block device adapter conforming to [`super::block_device::BlockDevice`].
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::sync::{Arc, Mutex, RwLock};
 
 use super::block_device::{BlockDevice, BlockDeviceError, DeviceStatus, DeviceType};

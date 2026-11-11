@@ -15,6 +15,14 @@
 //! - Initial User Stack Construction conforming to the Linux System V AMD64 ABI:
 //!   `argc`, `argv[]`, `envp[]`, `auxv[]`, and guaranteed 16-byte stack pointer alignment.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::fmt;
 use crate::process::HybridProcess;
 use crate::types::NtStatus;

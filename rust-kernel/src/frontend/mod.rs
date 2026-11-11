@@ -2,6 +2,14 @@
 //! Complete Fluent Design System, DWM, Taskbar, Start Menu, File Explorer,
 //! Commercial Settings App, Task Manager, Terminal, Device Manager, and Core Tools.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 pub mod fluent;
 pub mod dwm;
 pub mod shell;

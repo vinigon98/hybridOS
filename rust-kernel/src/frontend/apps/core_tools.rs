@@ -39,6 +39,14 @@
 // ============================================================================
 
 /// 2D coordinate point
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub struct Point {
     pub x: i32,
@@ -937,7 +945,7 @@ impl ModernNotepad {
             let id = self.tabs[0].id;
             let filename = std::path::Path::new(file_path)
                 .file_name()
-                .map(|s| s.to_string_lossy().to_string())
+                .map(|s| s.to_string())
                 .unwrap_or_else(|| "Document".to_string());
             self.tabs[0].title = filename;
             self.tabs[0].file_path = Some(file_path.to_string());
@@ -952,7 +960,7 @@ impl ModernNotepad {
         self.next_tab_id += 1;
         let filename = std::path::Path::new(file_path)
             .file_name()
-            .map(|s| s.to_string_lossy().to_string())
+            .map(|s| s.to_string())
             .unwrap_or_else(|| "Document".to_string());
         let tab = NotepadTab::with_content(id, filename, Some(file_path.to_string()), content.to_string());
         self.tabs.push(tab);
@@ -1078,7 +1086,7 @@ impl ModernNotepad {
     pub fn save_as_active_tab(&mut self, new_path: &str) {
         let filename = std::path::Path::new(new_path)
             .file_name()
-            .map(|s| s.to_string_lossy().to_string())
+            .map(|s| s.to_string())
             .unwrap_or_else(|| "Document".to_string());
         let tab = &mut self.tabs[self.active_tab_index];
         tab.file_path = Some(new_path.to_string());

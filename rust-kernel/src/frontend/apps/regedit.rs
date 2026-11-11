@@ -25,6 +25,14 @@
 //!    - Menu Bar, Address Bar, Split Pane (Tree View + Value List), Status Bar
 //!    - Interactive event processing and view-model projection
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::BTreeMap;
 use std::fmt;
 

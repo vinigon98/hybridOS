@@ -9,6 +9,14 @@
 //! - Display Modes (timing parameters, pixel clocks, 60Hz/144Hz refresh rates)
 //! - Atomic state updates, non-blocking page flips, and VBlank event notifications.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};

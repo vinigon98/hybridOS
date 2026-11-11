@@ -1,0 +1,11 @@
+[package]
+name = "hyav-sigformat"
+version = "0.1.0"
+edition = "2021"
+authors = ["HybridOS Core Team"]
+description = "Binary codec (.sig/.db) for HybridOS Antivirus signatures with Bloom filter and Ed25519/SHA-256 validation"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+
+[dev-dependencies]

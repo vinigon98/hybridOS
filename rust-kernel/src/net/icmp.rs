@@ -3,6 +3,14 @@
 //! Implements RFC 792 ICMP protocol, Echo Request/Reply generation and parsing,
 //! destination unreachable messages, internet checksum computation, and echo reply handling.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::fmt;
 
 use super::ipv4::{compute_internet_checksum, verify_internet_checksum, Ipv4Address, Ipv4Packet, Ipv4Protocol};

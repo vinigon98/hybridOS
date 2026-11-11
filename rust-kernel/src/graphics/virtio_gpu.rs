@@ -12,6 +12,14 @@
 //!   - `VIRTIO_GPU_CMD_RESOURCE_FLUSH` (0x0104)
 //! - Host scanout simulation, 2D blitting, and multi-monitor display heads.
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 use std::collections::HashMap;
 
 // ============================================================================

@@ -12,6 +12,14 @@
 //! - [`dxgi_bridge`]: DirectX / DXGI Compatibility Bridge (DXGI Factory, Adapter, Swapchain, Zero-Copy DRM/GEM Direct3D 11/12 Surface Mapping).
 //! - [`compositor`]: Dual-Personality Window Compositor (Win32 HWND + Linux Wayland `wl_surface` side-by-side).
 
+#[allow(unused_imports)]
+use alloc::string::{String, ToString};
+#[allow(unused_imports)]
+use alloc::vec::Vec;
+#[allow(unused_imports)]
+use alloc::boxed::Box;
+#[allow(unused_imports)]
+use crate::compat::FloatExt;
 pub mod drm;
 pub mod kms;
 pub mod virtio_gpu;
