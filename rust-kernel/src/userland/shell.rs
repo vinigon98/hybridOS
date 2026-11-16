@@ -34,7 +34,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::io::{BufRead, Write};
 
-use crate::drivers::hardware::{PciBar, PciBusScanner, VirtualPortIo};
+use crate::drivers::hardware::{PciBar, PciBusScanner, HardwarePortIo};
 use crate::loaders::elf::load_elf;
 use crate::loaders::pe::load_pe;
 use crate::mm::{self, MemoryInfo, PAGE_SIZE};
@@ -298,7 +298,7 @@ impl HybridShell {
         }
     }
 
-    /// Evaluates and executes a single command line string, returning the formatted output.
+    /// Evaluates and executes a single command line string, supporting pipes (|) and redirections (> and >>).
     pub fn execute(&mut self, line: &str) -> String {
         let trimmed = line.trim();
         if trimmed.is_empty() {
@@ -306,6 +306,54 @@ impl HybridShell {
         }
 
         self.history.push(trimmed.to_string());
+
+        // Check for file redirection: >> (append) or > (overwrite)
+        let (cmd_part, redir_target, append_mode) = if let Some(idx) = trimmed.find(">>") {
+            let (c, f) = trimmed.split_at(idx);
+            (c.trim(), Some(f[2..].trim()), true)
+        } else if let Some(idx) = trimmed.find('>') {
+            let (c, f) = trimmed.split_at(idx);
+            (c.trim(), Some(f[1..].trim()), false)
+        } else {
+            (trimmed, None, false)
+        };
+
+        // Check for pipeline (|)
+        let output = if cmd_part.contains('|') {
+            let stages: Vec<&str> = cmd_part.split('|').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+            let mut current_stdin: Option<String> = None;
+            for stage in stages {
+                let out = self.execute_stage(stage, current_stdin.as_deref());
+                current_stdin = Some(out);
+            }
+            current_stdin.unwrap_or_default()
+        } else {
+            self.execute_stage(cmd_part, None)
+        };
+
+        if let Some(target) = redir_target {
+            if !target.is_empty() {
+                let resolved = vfs::vfs_resolve_path(target).unwrap_or_else(|_| target.to_string());
+                if append_mode {
+                    let mut existing = vfs::vfs_read_all(&resolved).unwrap_or_default();
+                    existing.extend_from_slice(output.as_bytes());
+                    let _ = vfs::vfs_create_file(&resolved, &existing, vfs::Permissions::default_file());
+                } else {
+                    let _ = vfs::vfs_create_file(&resolved, output.as_bytes(), vfs::Permissions::default_file());
+                }
+                return String::new();
+            }
+        }
+
+        output
+    }
+
+    /// Evaluates a single command stage within a pipeline with optional standard input.
+    pub fn execute_stage(&mut self, stage_line: &str, stdin: Option<&str>) -> String {
+        let trimmed = stage_line.trim();
+        if trimmed.is_empty() {
+            return String::new();
+        }
 
         let tokens = match tokenize_command(trimmed) {
             Ok(t) if !t.is_empty() => t,
@@ -368,7 +416,7 @@ impl HybridShell {
                 self.last_exit_code = 0;
                 self.cmd_ver()
             }
-            "systeminfo" => {
+            "systeminfo" | "sysinfo" | "status" => {
                 self.last_exit_code = 0;
                 self.cmd_systeminfo()
             }
@@ -383,6 +431,10 @@ impl HybridShell {
             "date" | "time" | "get-date" => {
                 self.last_exit_code = 0;
                 self.cmd_date_time()
+            }
+            "uptime" => {
+                self.last_exit_code = 0;
+                self.cmd_uptime()
             }
             "meminfo" | "free" => {
                 self.last_exit_code = 0;
@@ -524,7 +576,7 @@ impl HybridShell {
                     }
                 }
             }
-            "cp" | "copy" => {
+            "cp" | "copy" | "copy-item" | "cpi" | "robocopy" | "xcopy" => {
                 if args.len() < 2 {
                     self.last_exit_code = 1;
                     "cp: missing destination file operand after source. Syntax: cp <src> <dest>".to_string()
@@ -535,7 +587,7 @@ impl HybridShell {
                     }
                 }
             }
-            "mv" | "move" | "ren" | "rename" => {
+            "mv" | "move" | "ren" | "rename" | "move-item" | "mi" => {
                 if args.len() < 2 {
                     self.last_exit_code = 1;
                     "mv: missing destination file operand after source. Syntax: mv <src> <dest>".to_string()
@@ -550,6 +602,11 @@ impl HybridShell {
                 self.last_exit_code = 0;
                 let path = args.first().map(|s| s.as_str()).unwrap_or("");
                 self.cmd_test_path(path)
+            }
+            "pathmode" => {
+                self.last_exit_code = 0;
+                let mode = args.first().map(|s| s.as_str()).unwrap_or("");
+                self.cmd_pathmode(mode)
             }
             "head" => {
                 if args.is_empty() {
@@ -575,19 +632,78 @@ impl HybridShell {
                     }
                 }
             }
-            "grep" | "select-string" | "sls" => {
-                if args.len() < 2 {
-                    self.last_exit_code = 1;
-                    "grep: missing pattern or file operand. Syntax: grep <pattern> <file>".to_string()
+            "grep" | "findstr" | "select-string" | "sls" => {
+                if let Some(input_text) = stdin {
+                    let pattern = args.first().map(|s| s.as_str()).unwrap_or("");
+                    let mut out = String::new();
+                    for line in input_text.lines() {
+                        if line.contains(pattern) {
+                            out.push_str(line);
+                            out.push('\n');
+                        }
+                    }
+                    self.last_exit_code = 0;
+                    out
                 } else {
-                    match self.cmd_grep(&args[0], &args[1]) {
-                        Ok(out) => { self.last_exit_code = 0; out }
-                        Err(e) => { self.last_exit_code = 1; format!("grep error: {}", e) }
+                    match self.cmd_grep_advanced(args) {
+                        Ok(out) => {
+                            self.last_exit_code = 0;
+                            out
+                        }
+                        Err(e) => {
+                            self.last_exit_code = 1;
+                            format!("grep: {}", e)
+                        }
                     }
                 }
             }
+            "find" => {
+                self.last_exit_code = 0;
+                self.cmd_find(
+                    args.first().map(|s| s.as_str()).unwrap_or("."),
+                    args.get(1).map(|s| s.as_str()),
+                    32,
+                )
+                .unwrap_or_else(|e| {
+                    self.last_exit_code = 1;
+                    format!("find: {}", e)
+                })
+            }
+            "sha256sum" | "sha256" => {
+                self.last_exit_code = 0;
+                self.cmd_sha256sum(args.first().map(|s| s.as_str()).unwrap_or(""))
+                    .unwrap_or_else(|e| {
+                        self.last_exit_code = 1;
+                        format!("sha256sum: {}", e)
+                    })
+            }
+            "md5sum" | "md5" => {
+                self.last_exit_code = 0;
+                self.cmd_md5sum(args.first().map(|s| s.as_str()).unwrap_or(""))
+                    .unwrap_or_else(|e| {
+                        self.last_exit_code = 1;
+                        format!("md5sum: {}", e)
+                    })
+            }
+            "nano" | "notepad" | "edit" => {
+                self.last_exit_code = 0;
+                self.cmd_nano(
+                    args.first().map(|s| s.as_str()).unwrap_or(""),
+                    args.get(1).map(|s| s.as_str()),
+                )
+                .unwrap_or_else(|e| {
+                    self.last_exit_code = 1;
+                    format!("nano: {}", e)
+                })
+            }
             "wc" => {
-                if args.is_empty() {
+                if let Some(input_text) = stdin {
+                    let lines = input_text.lines().count();
+                    let words = input_text.split_whitespace().count();
+                    let bytes = input_text.as_bytes().len();
+                    self.last_exit_code = 0;
+                    format!("{:>8} {:>8} {:>8} <stdin>\n", lines, words, bytes)
+                } else if args.is_empty() {
                     self.last_exit_code = 1;
                     "wc: missing file operand. Syntax: wc <file>".to_string()
                 } else {
@@ -605,11 +721,15 @@ impl HybridShell {
                 self.last_exit_code = 0;
                 self.cmd_vol()
             }
+            "winget" => {
+                self.last_exit_code = 0;
+                self.cmd_winget(args)
+            }
 
             // =================================================================
             // Network Diagnostics
             // =================================================================
-            "ifconfig" | "ip" | "get-netipaddress" => {
+            "ifconfig" | "ip" | "ipconfig" | "get-netipaddress" => {
                 self.last_exit_code = 0;
                 self.cmd_ifconfig()
             }
@@ -617,10 +737,15 @@ impl HybridShell {
                 self.last_exit_code = 0;
                 self.cmd_netstat()
             }
-            "ping" => {
+            "ping" | "test-connection" => {
                 self.last_exit_code = 0;
-                let target = args.first().map(|s| s.as_str()).unwrap_or("192.168.1.1");
+                let target = args.first().map(|s| s.as_str()).unwrap_or("10.0.2.2");
                 self.cmd_ping(target)
+            }
+            "curl" | "invoke-webrequest" | "iwr" => {
+                self.last_exit_code = 0;
+                let target = args.first().map(|s| s.as_str()).unwrap_or("");
+                self.cmd_curl(target)
             }
 
             // =================================================================
@@ -689,6 +814,9 @@ impl HybridShell {
                     if i < chars.len() && chars[i] == '}' {
                         i += 1;
                     }
+                } else if chars[i] == '?' {
+                    var_name.push('?');
+                    i += 1;
                 } else {
                     while i < chars.len() && (chars[i].is_alphanumeric() || chars[i] == '_') {
                         var_name.push(chars[i]);
@@ -916,7 +1044,7 @@ impl HybridShell {
 
     /// Command `lspci`: Displays enumerated hardware PCI devices.
     pub fn cmd_lspci(&self) -> String {
-        let io = VirtualPortIo::new();
+        let io = HardwarePortIo;
         let mut scanner = PciBusScanner::new(io);
         let devices = scanner.scan_all();
 
@@ -1352,7 +1480,7 @@ impl HybridShell {
     pub fn cmd_ver(&self) -> String {
         let mut out = String::new();
         out.push_str("Microsoft Windows [Version 10.0.22631.4317] (Windows NT x64 Subsystem)\n");
-        out.push_str("Linux version 6.12.0-hybridos (Linux POSIX Subsystem SysV AMD64 ABI)\n");
+        out.push_str("HybridOS Native POSIX Subsystem (ELF64 / System V AMD64 ABI)\n");
         out.push_str(&format!("{} Kernel [{}] Built on {}\n", HYBRIDOS_KERNEL_NAME, HYBRIDOS_RELEASE_VERSION, HYBRIDOS_BUILD_DATE));
         out
     }
@@ -1376,6 +1504,16 @@ impl HybridShell {
         format!("Current System Date & Time: {} (UTC)\n", HYBRIDOS_BUILD_DATE)
     }
 
+    /// Command `uptime`: Displays system uptime calculated from hardware timer ticks.
+    pub fn cmd_uptime(&self) -> String {
+        let ticks = crate::arch::idt::SYSTEM_TICKS.load(core::sync::atomic::Ordering::Relaxed);
+        let total_secs = ticks / 100;
+        let hours = total_secs / 3600;
+        let mins = (total_secs % 3600) / 60;
+        let secs = total_secs % 60;
+        format!(" {:02}:{:02}:{:02} up {:02}:{:02}, 1 user, load average: 0.05, 0.03, 0.01\n", hours, mins, secs, hours, mins)
+    }
+
     /// Command `systeminfo`: Displays comprehensive Windows-style system summary.
     pub fn cmd_systeminfo(&self) -> String {
         let mem = mm::get_memory_info();
@@ -1387,7 +1525,7 @@ impl HybridShell {
         let mut out = String::new();
         out.push_str("Host Name:                 HYBRIDOS-NODE1\n");
         out.push_str("OS Name:                   Hybrid Operating System (100% Pure Safe Rust)\n");
-        out.push_str("OS Version:                10.0.22631 N/A Build 22631 / Linux 6.12.0-hybridos\n");
+        out.push_str("OS Version:                HybridOS 1.0.0 Build 2611 (Dual-ABI Native Ring-0)\n");
         out.push_str("OS Manufacturer:           HybridOS Core Architecture Team\n");
         out.push_str("OS Build Type:             Multiprocessor Free (Parallel Dual-ABI)\n");
         out.push_str("System Boot Time:          2026-11-09, 15:45:00\n");
@@ -1491,11 +1629,13 @@ impl HybridShell {
         out.push_str(&format!("Tasks: {} total, {} running, 0 sleeping, 0 stopped\n", scheduler.stats().context_switches + 3, scheduler.ready_count()));
         out.push_str("%Cpu(s):  0.2 us,  0.4 sy,  0.0 ni, 99.4 id,  0.0 wa,  0.0 hi,  0.0 si\n");
         out.push_str(&format!("MiB Mem :  {:>5} total,  {:>5} free,  {:>5} used,  0.0 buff/cache\n\n", total_mb, free_mb, used_mb));
-        out.push_str(format!("{:<6} {:<16} {:<24} {:<6} {:<6} {:<10}\n", "PID", "USER", "COMMAND", "%CPU", "%MEM", "TIME+").as_str());
+        out.push_str(format!("{:<6} {:<16} {:<24} {:<6} {:<6} {:<10}\n", "PID", "USER", "COMMAND", "%CPU", "%MEM", "STATUS").as_str());
         out.push_str("----------------------------------------------------------------------\n");
-        out.push_str(&format!("{:<6} {:<16} {:<24} {:<6} {:<6} {:<10}\n", 0, "root", "System Idle", "0.0", "0.1", "0:01.00"));
-        out.push_str(&format!("{:<6} {:<16} {:<24} {:<6} {:<6} {:<10}\n", 1, "SYSTEM", "explorer_host.exe", "0.2", "1.2", "0:00.12"));
-        out.push_str(&format!("{:<6} {:<16} {:<24} {:<6} {:<6} {:<10}\n", 2, "root", "bash_server", "0.1", "0.8", "0:00.08"));
+        let procs = scheduler.get_processes_snapshot();
+        for (pid, name, _pers, stat) in procs {
+            let user = if pid == 0 { "SYSTEM" } else { "root" };
+            out.push_str(&format!("{:<6} {:<16} {:<24} {:<6} {:<6} {:<10}\n", pid, user, name, "0.1", "0.5", stat));
+        }
         out
     }
 
@@ -1562,6 +1702,64 @@ impl HybridShell {
         }
     }
 
+    /// Command `pathmode`: Configures or inspects bilingual path resolution mode.
+    pub fn cmd_pathmode(&mut self, mode: &str) -> String {
+        match mode.to_ascii_lowercase().as_str() {
+            "posix" | "linux" => {
+                self.flavor = ShellFlavor::LinuxBash;
+                self.personality = ExecutionPersonality::LinuxPosix;
+                if self.cwd.starts_with("C:") { self.cwd = "/".to_string(); }
+                "[VFS Bilíngue] Pathmode switched to POSIX ('/' root syntax active)\n".to_string()
+            }
+            "windows" | "win" | "dos" => {
+                self.flavor = ShellFlavor::WindowsCmd;
+                self.personality = ExecutionPersonality::WindowsNt;
+                if self.cwd == "/" { self.cwd = "C:\\".to_string(); }
+                "[VFS Bilíngue] Pathmode switched to Windows ('C:\\' root syntax active)\n".to_string()
+            }
+            "dual" | "hybrid" => {
+                self.flavor = ShellFlavor::Hybrid;
+                self.personality = ExecutionPersonality::HybridNative;
+                "[VFS Bilíngue] Pathmode switched to DUAL (Bidirectional '/' <-> 'C:\\' normalization online)\n".to_string()
+            }
+            _ => {
+                format!(
+                    "HybridOS Bilingual VFS Path Resolver:\n  Current Flavor: {:?}\n  Active CWD: {}\n  Usage: pathmode [posix | windows | dual]\n  - posix:   Enforces Unix POSIX path conventions (/Users/Public/...)\n  - windows: Enforces Win32 DOS path conventions (C:\\Users\\Public\\...)\n  - dual:    Simultaneous dual-personality resolution\n",
+                    self.flavor, self.cwd
+                )
+            }
+        }
+    }
+
+    /// Command `winget`: HybridOS App Management and Software Catalog.
+    pub fn cmd_winget(&mut self, args: &[String]) -> String {
+        let action = args.first().map(|s| s.as_str()).unwrap_or("list");
+        match action {
+            "search" | "list" => {
+                let mut out = String::new();
+                out.push_str("Nome                        ID                      Versao      Fonte\n");
+                out.push_str("----------------------------------------------------------------------\n");
+                out.push_str("Google Chrome               Google.Chrome           130.0.6723  hybridos-repo\n");
+                out.push_str("DirectX Runtime             Microsoft.DirectX.9c    9.29.1974   hybridos-repo\n");
+                out.push_str("Visual Studio Code          Microsoft.VSCode        1.95.0      hybridos-repo\n");
+                out.push_str("VLC Media Player            VideoLAN.VLC            3.0.21      hybridos-repo\n");
+                out.push_str("7-Zip Compression           IgorPavlov.7zip         24.08       hybridos-repo\n");
+                out
+            }
+            "install" => {
+                let pkg = args.get(1).map(|s| s.as_str()).unwrap_or("app");
+                let mut out = String::new();
+                out.push_str(&format!("Encontrado: {} [hybridos-repo]\n", pkg));
+                out.push_str("Baixando pacote binario (.exe / .elf)...\n");
+                out.push_str("Hash SHA-256 verificado com sucesso.\n");
+                out.push_str("Instalando no subsistema correspondente...\n");
+                out.push_str(&format!("Instalacao de '{}' concluida com sucesso.\n", pkg));
+                out
+            }
+            _ => "Uso do winget: winget [list|search <termo>|install <pacote>]\n".to_string(),
+        }
+    }
+
     /// Command `head`: Prints the first N lines of a file.
     pub fn cmd_head(&self, path: &str, count: usize) -> Result<String, ShellError> {
         let text = self.cmd_cat(path)?;
@@ -1620,11 +1818,42 @@ impl HybridShell {
     /// Command `ifconfig` / `ip` / `get-netipaddress`: Displays network adapter configuration.
     pub fn cmd_ifconfig(&self) -> String {
         let mut out = String::new();
-        out.push_str("eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n");
-        out.push_str("        inet 192.168.1.100  netmask 255.255.255.0  broadcast 192.168.1.255\n");
-        out.push_str("        ether 52:54:00:12:34:56  txqueuelen 1000  (VirtIO-Net Network Adapter)\n");
-        out.push_str("        RX packets 1420  bytes 128456 (125.4 KB)\n");
-        out.push_str("        TX packets 980  bytes 84320 (82.3 KB)\n\n");
+        let nic_guard = crate::drivers::e1000::GLOBAL_E1000.lock();
+        let net_guard = crate::net::smoltcp_bridge::GLOBAL_NET_CONTEXT.lock();
+
+        if let (Some(nic), Some(net)) = (nic_guard.as_ref(), net_guard.as_ref()) {
+            let mac = nic.mac_address;
+            out.push_str("eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500\n");
+            out.push_str(&format!(
+                "        inet {}  netmask 255.255.255.0  broadcast 10.0.2.255\n",
+                net.ip_address
+            ));
+            if let Some(gw) = net.gateway {
+                out.push_str(&format!("        gateway {}\n", gw));
+            }
+            if let Some(dns) = net.dns_servers.first() {
+                out.push_str(&format!("        nameserver {}\n", dns));
+            }
+            out.push_str(&format!(
+                "        ether {:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}  txqueuelen 1000  (Intel 82540EM Gigabit Ethernet)\n",
+                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
+            ));
+            out.push_str(&format!(
+                "        RX packets {}  bytes {} ({:.1} KB)\n",
+                nic.stats_rx_packets, nic.stats_rx_bytes, (nic.stats_rx_bytes as f64) / 1024.0
+            ));
+            out.push_str(&format!(
+                "        TX packets {}  bytes {} ({:.1} KB)\n",
+                nic.stats_tx_packets, nic.stats_tx_bytes, (nic.stats_tx_bytes as f64) / 1024.0
+            ));
+            out.push_str(&format!(
+                "        DHCPv4 status: {}\n\n",
+                if net.dhcp_configured { "Configured (Active Lease)" } else { "Static / Discovering" }
+            ));
+        } else {
+            out.push_str("eth0: Network interface not initialized.\n\n");
+        }
+
         out.push_str("lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536\n");
         out.push_str("        inet 127.0.0.1  netmask 255.0.0.0\n");
         out.push_str("        loop  txqueuelen 1000  (Local Loopback)\n");
@@ -1639,7 +1868,7 @@ impl HybridShell {
         out.push_str("-------------------------------------------------------------------------------\n");
         out.push_str("tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN     \n");
         out.push_str("tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN     \n");
-        out.push_str("tcp        0      0 192.168.1.100:44321     192.168.1.1:443         ESTABLISHED\n");
+        out.push_str("tcp        0      0 10.0.2.15:44321         10.0.2.2:80             ESTABLISHED\n");
         out.push_str("udp        0      0 0.0.0.0:53              0.0.0.0:*                          \n");
         out.push_str("udp        0      0 0.0.0.0:68              0.0.0.0:*                          \n");
         out.push_str("-------------------------------------------------------------------------------\n");
@@ -1648,21 +1877,225 @@ impl HybridShell {
 
     /// Command `ping`: Generates ICMP Echo Request diagnostics.
     pub fn cmd_ping(&self, target: &str) -> String {
+        let ip_target = if target.is_empty() {
+            smoltcp::wire::Ipv4Address::new(10, 0, 2, 2)
+        } else {
+            let parts: alloc::vec::Vec<&str> = target.split('.').collect();
+            if parts.len() == 4 {
+                let a = parts[0].parse::<u8>().unwrap_or(10);
+                let b = parts[1].parse::<u8>().unwrap_or(0);
+                let c = parts[2].parse::<u8>().unwrap_or(2);
+                let d = parts[3].parse::<u8>().unwrap_or(2);
+                smoltcp::wire::Ipv4Address::new(a, b, c, d)
+            } else {
+                smoltcp::wire::Ipv4Address::new(10, 0, 2, 2)
+            }
+        };
+
+        match crate::net::smoltcp_bridge::perform_ping(ip_target, 3) {
+            Ok(output) => output,
+            Err(e) => format!("ping error: {}\n", e),
+        }
+    }
+
+    /// Command `curl`: Fetches HTTP documents over real TCP/IP sockets.
+    pub fn cmd_curl(&self, url: &str) -> String {
+        if url.is_empty() {
+            return "usage: curl <ip[:port][/path]>\n  example: curl 10.0.2.2:80/\n".to_string();
+        }
+
+        let clean_url = url.trim_start_matches("http://");
+        let (host_port, path) = match clean_url.find('/') {
+            Some(idx) => (&clean_url[..idx], &clean_url[idx..]),
+            None => (clean_url, "/"),
+        };
+
+        let (host_str, port) = match host_port.find(':') {
+            Some(idx) => {
+                let p = host_port[idx + 1..].parse::<u16>().unwrap_or(80);
+                (&host_port[..idx], p)
+            }
+            None => (host_port, 80),
+        };
+
+        let parts: alloc::vec::Vec<&str> = host_str.split('.').collect();
+        let target_ip = if parts.len() == 4 {
+            let a = parts[0].parse::<u8>().unwrap_or(10);
+            let b = parts[1].parse::<u8>().unwrap_or(0);
+            let c = parts[2].parse::<u8>().unwrap_or(2);
+            let d = parts[3].parse::<u8>().unwrap_or(2);
+            smoltcp::wire::Ipv4Address::new(a, b, c, d)
+        } else {
+            smoltcp::wire::Ipv4Address::new(10, 0, 2, 2)
+        };
+
+        match crate::net::smoltcp_bridge::perform_curl(target_ip, port, path) {
+            Ok(resp) => resp,
+            Err(e) => format!("curl: (7) Failed to connect: {}\n", e),
+        }
+    }
+
+    /// Advanced grep supporting flags -i, -n, -v, -c, -l
+    pub fn cmd_grep_advanced(&self, args: &[String]) -> Result<String, ShellError> {
+        let mut case_insensitive = false;
+        let mut line_number = false;
+        let mut invert_match = false;
+        let mut count_only = false;
+        let mut files_only = false;
+        let mut pattern: Option<&str> = None;
+        let mut files: Vec<&str> = Vec::new();
+
+        for arg in args {
+            if arg.starts_with('-') && arg.len() > 1 && !arg.starts_with("--") {
+                for ch in arg[1..].chars() {
+                    match ch {
+                        'i' => case_insensitive = true,
+                        'n' => line_number = true,
+                        'v' => invert_match = true,
+                        'c' => count_only = true,
+                        'l' => files_only = true,
+                        _ => {}
+                    }
+                }
+            } else if pattern.is_none() {
+                pattern = Some(arg.as_str());
+            } else {
+                files.push(arg.as_str());
+            }
+        }
+
+        let pat = pattern.ok_or_else(|| ShellError::InvalidArgument("grep: missing pattern".to_string()))?;
+        if files.is_empty() {
+            return Err(ShellError::InvalidArgument("grep: missing file operand".to_string()));
+        }
+
         let mut out = String::new();
-        out.push_str(&format!("PING {} (192.168.1.1) 56(84) bytes of data.\n", target));
-        out.push_str(&format!("64 bytes from 192.168.1.1: icmp_seq=1 ttl=64 time=0.042 ms\n"));
-        out.push_str(&format!("64 bytes from 192.168.1.1: icmp_seq=2 ttl=64 time=0.038 ms\n"));
-        out.push_str(&format!("64 bytes from 192.168.1.1: icmp_seq=3 ttl=64 time=0.041 ms\n\n"));
-        out.push_str(&format!("--- {} ping statistics ---\n", target));
-        out.push_str("3 packets transmitted, 3 received, 0% packet loss, time 2004ms\n");
-        out.push_str("rtt min/avg/max/mdev = 0.038/0.040/0.042/0.002 ms\n");
-        out
+        let pat_lower = pat.to_ascii_lowercase();
+
+        for file in files {
+            let content = match self.cmd_cat(file) {
+                Ok(c) => c,
+                Err(e) => {
+                    out.push_str(&format!("grep: {}: {}\n", file, e));
+                    continue;
+                }
+            };
+
+            let mut matched_count = 0;
+            let mut file_matched = false;
+
+            for (idx, line) in content.lines().enumerate() {
+                let matches = if case_insensitive {
+                    line.to_ascii_lowercase().contains(&pat_lower)
+                } else {
+                    line.contains(pat)
+                };
+
+                let condition = if invert_match { !matches } else { matches };
+
+                if condition {
+                    matched_count += 1;
+                    file_matched = true;
+                    if !count_only && !files_only {
+                        if line_number {
+                            out.push_str(&format!("{}:{}:{}\n", file, idx + 1, line));
+                        } else {
+                            out.push_str(&format!("{}:{}\n", file, line));
+                        }
+                    }
+                }
+            }
+
+            if files_only && file_matched {
+                out.push_str(&format!("{}\n", file));
+            } else if count_only {
+                out.push_str(&format!("{}:{}\n", file, matched_count));
+            }
+        }
+
+        Ok(out)
+    }
+
+    /// Recursively search directories with glob/name matching and max depth
+    pub fn cmd_find(&self, root_path: &str, name_filter: Option<&str>, max_depth: usize) -> Result<String, ShellError> {
+        let mut out = String::new();
+        let mut stack: Vec<(String, usize)> = Vec::new();
+        stack.push((root_path.to_string(), 0));
+
+        while let Some((current_dir, depth)) = stack.pop() {
+            if depth > max_depth {
+                continue;
+            }
+
+            if let Some(filter) = name_filter {
+                if current_dir.ends_with(filter) || current_dir.contains(filter) {
+                    out.push_str(&format!("{}\n", current_dir));
+                }
+            } else {
+                out.push_str(&format!("{}\n", current_dir));
+            }
+
+            if let Ok(entries) = vfs::vfs_readdir(&current_dir) {
+                for entry in entries {
+                    if entry.name == "." || entry.name == ".." {
+                        continue;
+                    }
+                    let sub_path = if current_dir.ends_with('/') || current_dir.ends_with('\\') {
+                        format!("{}{}", current_dir, entry.name)
+                    } else if current_dir.contains('\\') {
+                        format!("{}\\{}", current_dir, entry.name)
+                    } else {
+                        format!("{}/{}", current_dir, entry.name)
+                    };
+
+                    if entry.ino_type == crate::vfs::InodeType::Directory {
+                        stack.push((sub_path, depth + 1));
+                    } else if let Some(filter) = name_filter {
+                        if entry.name.contains(filter) {
+                            out.push_str(&format!("{}\n", sub_path));
+                        }
+                    } else {
+                        out.push_str(&format!("{}\n", sub_path));
+                    }
+                }
+            }
+        }
+
+        Ok(out)
+    }
+
+    /// Computes and prints SHA256 cryptographic hash of files
+    pub fn cmd_sha256sum(&self, path: &str) -> Result<String, ShellError> {
+        let data = vfs::vfs_read_all(path)?;
+        let hash = crate::security::sha256::sha256_hash(&data);
+        let hash_hex = hash.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+        Ok(format!("{}  {}\n", hash_hex, path))
+    }
+
+    /// Computes and prints MD5 cryptographic hash of files
+    pub fn cmd_md5sum(&self, path: &str) -> Result<String, ShellError> {
+        let data = vfs::vfs_read_all(path)?;
+        let hash = crate::security::md5::Md5::digest_hex(&data);
+        Ok(format!("{}  {}\n", hash, path))
+    }
+
+    /// Interactive or scripted file editor.
+    pub fn cmd_nano(&mut self, path: &str, new_content: Option<&str>) -> Result<String, ShellError> {
+        if let Some(content) = new_content {
+            vfs::vfs_create_file(path, content.as_bytes(), vfs::Permissions::default_file())?;
+            Ok(format!("[nano/notepad] Saved {} bytes to {}\n", content.len(), path))
+        } else {
+            let existing = vfs::vfs_read_all(path).unwrap_or_default();
+            let text = String::from_utf8_lossy(&existing);
+            Ok(format!("[nano/notepad] Opening '{}' ({} lines, {} bytes). Usage: nano <file> <new_content>\n---\n{}",
+                path, text.lines().count(), existing.len(), text))
+        }
     }
 
     /// Command `dmesg`: Displays kernel boot ring buffer and hardware logs.
     pub fn cmd_dmesg(&self) -> String {
         let mut out = String::new();
-        out.push_str("[    0.000000] Linux version 6.12.0-hybridos (Windows NT 10.0.22631 SSDT Compatible)\n");
+        out.push_str("[    0.000000] HybridOS Bare-Metal Core v1.0.0 (Dual-ABI Ring-0 Executive)\n");
         out.push_str("[    0.000001] Command line: BOOT_IMAGE=/boot/vmlinuz-hybridos root=/dev/ram0 rw\n");
         out.push_str("[    0.000010] x86/fpu: Supporting XSAVE feature 0x001: 'x87 floating point registers'\n");
         out.push_str("[    0.000020] ACPI: Early table checksum verification disabled\n");

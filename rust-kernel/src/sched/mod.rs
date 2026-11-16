@@ -14,6 +14,7 @@ use alloc::boxed::Box;
 use crate::compat::FloatExt;
 pub mod task;
 pub mod scheduler;
+pub mod context;
 
 pub use task::{
     BlockReason, CpuContext, Priority, PriorityClass, ProcessControlBlock, ProcessState,
@@ -23,9 +24,27 @@ pub use scheduler::{Scheduler, SchedulerStats};
 
 use std::sync::{Arc, Mutex, OnceLock};
 use crate::personality::ExecutionPersonality;
+use crate::process::HybridProcess;
 
 /// Global Kernel Scheduler singleton instance.
 static SCHEDULER: OnceLock<Mutex<Scheduler>> = OnceLock::new();
+
+/// Global active system process holding handles for early kernel services.
+static SYSTEM_BOOT_PROCESS: OnceLock<Mutex<HybridProcess>> = OnceLock::new();
+
+/// Retrieves the system singleton process instance.
+pub fn get_boot_process() -> &'static Mutex<HybridProcess> {
+    SYSTEM_BOOT_PROCESS.get_or_init(|| {
+        Mutex::new(HybridProcess::new(1, "system_init", ExecutionPersonality::LinuxPosix))
+    })
+}
+
+/// Dispatches a syscall using the active process corresponding to the calling thread.
+pub fn dispatch_current_syscall(tf: &mut crate::trap::TrapFrame) -> u64 {
+    // If a process is registered under the current TID, dispatch with its PCB/process state
+    let mut boot_proc = get_boot_process().lock().unwrap();
+    crate::syscall::SyscallRouter::dispatch(&mut boot_proc, tf)
+}
 
 /// Initialize the global scheduler subsystem.
 ///
@@ -40,9 +59,26 @@ pub fn get_scheduler() -> &'static Mutex<Scheduler> {
     init_scheduler()
 }
 
-/// Dispatch scheduling cycle on the global scheduler.
+/// Dispatch scheduling cycle on the global scheduler with hardware context switch.
 pub fn schedule() -> Option<u64> {
-    get_scheduler().lock().unwrap().schedule()
+    let switch_data = {
+        let mut sched = get_scheduler().lock().unwrap();
+        sched.pick_next_thread()
+    };
+
+    if let Some((prev_ctx, next_ctx, next_tid, next_kstack)) = switch_data {
+        // Update hardware TSS.RSP0 and per-CPU data for the incoming thread
+        crate::arch::set_kernel_stack(next_kstack);
+        crate::arch::update_current_cpu_task(next_tid, next_kstack, next_ctx as usize);
+
+        // Hardware assembly context switch
+        unsafe {
+            context::switch_to(prev_ctx, next_ctx);
+        }
+        Some(next_tid)
+    } else {
+        None
+    }
 }
 
 /// Cooperatively yield remainder of current thread's quantum.

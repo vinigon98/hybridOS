@@ -16,6 +16,10 @@ pub const IA32_SFMASK: u32      = 0xC000_0084;
 pub const IA32_FS_BASE: u32     = 0xC000_0100;
 pub const IA32_GS_BASE: u32     = 0xC000_0101;
 pub const IA32_KERNEL_GS_BASE: u32 = 0xC000_0102;
+pub const IA32_APIC_BASE: u32    = 0x0000_001B;
+
+// CR0 Bits
+pub const CR0_WP: u64 = 1 << 16; // Write Protect in Ring 0
 
 // EFER Bits
 pub const EFER_SCE: u64 = 1 << 0; // System Call Extensions (enables SYSCALL/SYSRET)
@@ -158,4 +162,12 @@ pub unsafe fn init_syscall_msrs(syscall_entry_rip: u64) {
 
     // 4. Setup SFMASK: Mask interrupts (IF) and debug trap (TF) on syscall entry
     wrmsr(IA32_SFMASK, RFLAGS_IF | RFLAGS_TF | RFLAGS_DF);
+}
+
+/// Enables Ring 0 Write Protect (CR0.WP).
+/// When enabled, the CPU honors read-only page permissions even in supervisor mode (Ring 0),
+/// which is essential for secure Copy-on-Write (CoW).
+#[inline]
+pub unsafe fn enable_cr0_wp() {
+    write_cr0(read_cr0() | CR0_WP);
 }

@@ -42,8 +42,12 @@ impl SyscallRouter {
                 if tf.rsp != 0 {
                     let user_stack = tf.rsp as *const u64;
                     unsafe {
-                        a5 = *user_stack.add(5);
-                        a6 = *user_stack.add(6);
+                        if let Ok(v5) = crate::security::copy_from_user(user_stack.add(5)) {
+                            a5 = v5;
+                        }
+                        if let Ok(v6) = crate::security::copy_from_user(user_stack.add(6)) {
+                            a6 = v6;
+                        }
                     }
                 }
 

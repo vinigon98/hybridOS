@@ -11,5 +11,7 @@ qemu/bin/
 tools/
 reactos-ref/
 qemu/7zextra/
+logs/
+qemu/serial_latest.log
 
 

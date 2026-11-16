@@ -202,7 +202,7 @@ impl Default for CpuContext {
             rip: 0,
             rflags: 0x202, // IF (Interrupt Enable Flag) set
             cs: 0x23,      // Default Ring 3 code selector
-            ss: 0x2B,      // Default Ring 3 data selector
+            ss: 0x1B,      // Default Ring 3 data selector
             fs_base: 0,
             gs_base: 0,
             cr3: 0,
@@ -327,6 +327,7 @@ pub struct ThreadControlBlock {
     pub context: CpuContext,
 
     /// Kernel execution stack top and size.
+    pub kernel_stack_buffer: Option<alloc::vec::Vec<u8>>,
     pub kernel_stack_top: u64,
     pub kernel_stack_size: usize,
     /// User mode stack top and size.
@@ -368,6 +369,10 @@ impl ThreadControlBlock {
     ) -> Self {
         let context = CpuContext::new_entry(entry_point, stack_top, 0, personality, cr3);
 
+        let kernel_stack_size = 16 * 1024;
+        let mut kstack = alloc::vec![0u8; kernel_stack_size];
+        let kernel_stack_top = (kstack.as_mut_ptr() as u64 + kernel_stack_size as u64) & !0xF;
+
         Self {
             tid,
             pid,
@@ -377,8 +382,9 @@ impl ThreadControlBlock {
             base_priority: priority,
             current_priority: priority,
             context,
-            kernel_stack_top: 0,
-            kernel_stack_size: 16 * 1024, // 16 KB default kernel stack
+            kernel_stack_buffer: Some(kstack),
+            kernel_stack_top,
+            kernel_stack_size,
             user_stack_top: stack_top,
             user_stack_size: 2 * 1024 * 1024, // 2 MB default user stack
             time_slice_quantum: Self::DEFAULT_QUANTUM_TICKS,

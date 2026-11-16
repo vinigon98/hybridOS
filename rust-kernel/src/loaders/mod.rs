@@ -10,3 +10,8 @@ pub mod pe;
 pub mod elf;
 pub mod pe64_advanced;
 pub mod elf64_advanced;
+pub mod pe_reloc;
+pub mod pe_iat;
+
+pub use elf::{load_elf, spawn_elf_process};
+pub use pe::{load_pe, spawn_pe_process};

@@ -177,6 +177,17 @@ pub fn sha256_hash(data: &[u8]) -> [u8; 32] {
     hasher.finalize()
 }
 
+/// Convenience one-shot hashing function returning hex string
+pub fn sha256_hex(data: &[u8]) -> alloc::string::String {
+    let hash = sha256_hash(data);
+    let mut s = alloc::string::String::with_capacity(64);
+    for byte in hash {
+        use core::fmt::Write;
+        let _ = write!(s, "{:02x}", byte);
+    }
+    s
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

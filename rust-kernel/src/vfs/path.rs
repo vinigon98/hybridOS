@@ -222,6 +222,11 @@ impl UnifiedPathResolver {
         mappings.insert("e:".to_string(), "/e".to_string());
         mappings.insert("z:".to_string(), "/z".to_string());
 
+        // Bilingual Cross-Subsystem Aliases
+        mappings.insert("/mnt/c".to_string(), "/c".to_string());
+        mappings.insert("/users".to_string(), "/c/Users".to_string());
+        mappings.insert("/windows".to_string(), "/c/Windows".to_string());
+
         // NT Object Manager Prefixes
         mappings.insert("\\systemroot".to_string(), "/c/Windows".to_string());
         mappings.insert("\\systemroot\\".to_string(), "/c/Windows/".to_string());
@@ -348,6 +353,21 @@ impl UnifiedPathResolver {
         // 5. Unix Absolute Paths (`/bin/sh`, `/dev/null`)
         if path.starts_with('/') {
             let converted = path.replace('\\', "/");
+            let lower_conv = converted.to_ascii_lowercase();
+
+            // Real-time bilingual path normalization
+            if lower_conv.starts_with("/mnt/c/") {
+                return Ok((PathStyle::Unix, format!("/c/{}", &converted[7..])));
+            } else if lower_conv == "/mnt/c" {
+                return Ok((PathStyle::Unix, "/c".to_string()));
+            } else if lower_conv.starts_with("/users/") {
+                return Ok((PathStyle::Unix, format!("/c/Users/{}", &converted[7..])));
+            } else if lower_conv == "/users" {
+                return Ok((PathStyle::Unix, "/c/Users".to_string()));
+            } else if lower_conv.starts_with("/windows/") {
+                return Ok((PathStyle::Unix, format!("/c/Windows/{}", &converted[9..])));
+            }
+
             return Ok((PathStyle::Unix, converted));
         }
 

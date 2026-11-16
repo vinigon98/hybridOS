@@ -26,6 +26,7 @@ impl NtStatus {
     pub const BUFFER_TOO_SMALL: Self = NtStatus(-1073741789); // 0xC0000023
     pub const END_OF_FILE: Self = NtStatus(-1073741807); // 0xC0000011
     pub const INFO_LENGTH_MISMATCH: Self = NtStatus(-1073741820); // 0xC0000004
+    pub const ACCESS_VIOLATION: Self = NtStatus(-1073741819); // 0xC0000005
     pub const SUSPEND_COUNT_EXCEEDED: Self = NtStatus(-1073741750); // 0xC000004A
     pub const THREAD_IS_TERMINATING: Self = NtStatus(-1073741749); // 0xC000004B
     pub const NOT_SUPPORTED: Self = NtStatus(-1073741637); // 0xC00000BB

@@ -12,6 +12,7 @@ use alloc::boxed::Box;
 #[allow(unused_imports)]
 use crate::compat::FloatExt;
 pub mod fltmgr;
+pub mod fat32;
 
 pub use crate::compat::fs::*;
 

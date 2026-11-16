@@ -6,4 +6,10 @@ authors = ["Vinicius", "NexusCore"]
 description = "A proprietary dual-personality hybrid kernel running Windows and Linux binaries/drivers side-by-side"
 
 [dependencies]
-# Standard library is used for the user-mode execution host and validation testbed
+smoltcp = { version = "0.14.0", default-features = false, features = ["alloc", "medium-ethernet", "proto-ipv4", "proto-dhcpv4", "socket-icmp", "socket-udp", "socket-tcp", "socket-dhcpv4"] }
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

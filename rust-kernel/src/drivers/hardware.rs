@@ -40,6 +40,41 @@ pub trait PortIo: Send + Sync {
     fn write_u32(&mut self, port: u16, val: u32);
 }
 
+/// Real Bare-Metal Port I/O operating directly on x86_64 CPU I/O space (0xCF8, 0xCFC, etc.)
+pub struct HardwarePortIo;
+
+impl PortIo for HardwarePortIo {
+    #[inline]
+    fn read_u8(&mut self, port: u16) -> u8 {
+        unsafe { crate::arch::msr::inb(port) }
+    }
+
+    #[inline]
+    fn read_u16(&mut self, port: u16) -> u16 {
+        unsafe { crate::arch::msr::inw(port) }
+    }
+
+    #[inline]
+    fn read_u32(&mut self, port: u16) -> u32 {
+        unsafe { crate::arch::msr::inl(port) }
+    }
+
+    #[inline]
+    fn write_u8(&mut self, port: u16, val: u8) {
+        unsafe { crate::arch::msr::outb(port, val); }
+    }
+
+    #[inline]
+    fn write_u16(&mut self, port: u16, val: u16) {
+        unsafe { crate::arch::msr::outw(port, val); }
+    }
+
+    #[inline]
+    fn write_u32(&mut self, port: u16, val: u32) {
+        unsafe { crate::arch::msr::outl(port, val); }
+    }
+}
+
 /// Simulated / Virtual Port I/O device for testing, emulation, and userspace simulation.
 pub struct VirtualPortIo {
     pci_config_address: u32,

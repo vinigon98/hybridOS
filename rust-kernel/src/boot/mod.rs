@@ -20,4 +20,7 @@ pub use self::limine::{
     get_hhdm_offset,
     get_framebuffer,
     get_largest_usable_memory,
+    get_memmap_entries,
+    LimineMemmapEntry,
+    LIMINE_MEMMAP_USABLE,
 };

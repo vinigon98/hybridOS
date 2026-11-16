@@ -23,6 +23,7 @@ pub mod udp;
 pub mod tcp;
 pub mod socket;
 pub mod filter;
+pub mod smoltcp_bridge;
 
 pub use crate::compat::net::*;
 

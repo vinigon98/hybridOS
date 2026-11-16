@@ -180,6 +180,21 @@ pub fn get_framebuffer() -> Option<(&'static mut [u8], u64, u64, u64)> {
     }
 }
 
+/// Returns a slice of raw memory map entry pointers from Limine.
+pub fn get_memmap_entries() -> Option<&'static [*mut LimineMemmapEntry]> {
+    unsafe {
+        if MEMMAP_REQUEST.response.is_null() {
+            return None;
+        }
+        let resp = &*MEMMAP_REQUEST.response;
+        if resp.entries.is_null() || resp.entry_count == 0 {
+            return None;
+        }
+        let entries = core::slice::from_raw_parts(resp.entries, resp.entry_count as usize);
+        Some(entries)
+    }
+}
+
 /// Iterates over physical memory regions, returning (usable_base, usable_size).
 pub fn get_largest_usable_memory() -> (u64, u64) {
     unsafe {
@@ -207,6 +222,96 @@ pub fn get_largest_usable_memory() -> (u64, u64) {
             (0x0020_0000, 128 * 1024 * 1024)
         } else {
             (best_base, best_length)
+        }
+    }
+}
+
+// --- RSDP (Root System Description Pointer) Request ---
+
+#[repr(C)]
+pub struct LimineRsdpResponse {
+    pub revision: u64,
+    pub address: *mut u8,
+}
+
+#[repr(C)]
+pub struct LimineRsdpRequest {
+    pub id: [u64; 4],
+    pub revision: u64,
+    pub response: *mut LimineRsdpResponse,
+}
+
+unsafe impl Sync for LimineRsdpRequest {}
+
+#[used]
+#[link_section = ".limine_requests"]
+pub static mut RSDP_REQUEST: LimineRsdpRequest = LimineRsdpRequest {
+    id: [LIMINE_COMMON_MAGIC[0], LIMINE_COMMON_MAGIC[1], 0xc5e77b6b397e7b43, 0x27637845accdcf3c],
+    revision: 0,
+    response: core::ptr::null_mut(),
+};
+
+// --- SMP / Multi-Processor Request ---
+
+pub type LimineGotoAddress = Option<unsafe extern "C" fn(info: *const LimineSmpInfo) -> !>;
+
+#[repr(C)]
+pub struct LimineSmpInfo {
+    pub processor_id: u32,
+    pub lapic_id: u32,
+    pub reserved: u64,
+    pub goto_address: LimineGotoAddress,
+    pub extra_argument: u64,
+}
+
+#[repr(C)]
+pub struct LimineSmpResponse {
+    pub revision: u64,
+    pub flags: u32,
+    pub bsp_lapic_id: u32,
+    pub cpu_count: u64,
+    pub cpus: *mut *mut LimineSmpInfo,
+}
+
+#[repr(C)]
+pub struct LimineSmpRequest {
+    pub id: [u64; 4],
+    pub revision: u64,
+    pub response: *mut LimineSmpResponse,
+    pub flags: u64,
+}
+
+unsafe impl Sync for LimineSmpRequest {}
+
+#[used]
+#[link_section = ".limine_requests"]
+pub static mut SMP_REQUEST: LimineSmpRequest = LimineSmpRequest {
+    id: [LIMINE_COMMON_MAGIC[0], LIMINE_COMMON_MAGIC[1], 0x95a67b819a1b857e, 0xa0b61b723b6a73e0],
+    revision: 0,
+    response: core::ptr::null_mut(),
+    flags: 0,
+};
+
+/// Retorna o endereço físico ou virtual do RSDP retornado pelo Limine.
+pub fn get_rsdp_address() -> Option<u64> {
+    unsafe {
+        if !RSDP_REQUEST.response.is_null() {
+            let resp = &*RSDP_REQUEST.response;
+            if !resp.address.is_null() {
+                return Some(resp.address as u64);
+            }
+        }
+        None
+    }
+}
+
+/// Retorna a resposta SMP do Limine se fornecida.
+pub fn get_smp_response() -> Option<&'static LimineSmpResponse> {
+    unsafe {
+        if !SMP_REQUEST.response.is_null() {
+            Some(&*SMP_REQUEST.response)
+        } else {
+            None
         }
     }
 }

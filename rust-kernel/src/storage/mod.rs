@@ -21,6 +21,8 @@ pub mod ahci;
 pub mod gpt;
 pub mod fat32;
 pub mod ext4;
+pub mod partition;
+pub mod ata_stream;
 
 pub use block_device::{
     BlockDevice as HwBlockDevice, BlockDeviceError, BlockDeviceInfo, BlockDeviceRegistry,
@@ -737,6 +739,59 @@ pub fn mount_gpt_disk(
     }
 
     Ok(mounted)
+}
+
+/// Initializes primary ATA storage, parses MBR/GPT partitions and mounts filesystems.
+pub fn init_and_mount_primary_storage(vfs: &VirtualFileSystem) {
+    let ata_dev: Arc<dyn BlockDevice> = match ata_stream::AtaBlockDevice::new(true) {
+        Ok(dev) => Arc::new(dev),
+        Err(_) => {
+            crate::serial_println!("[STORAGE] ATA Primary Master not responding or not present.");
+            return;
+        }
+    };
+
+    let mut sector0 = [0u8; 512];
+    if ata_dev.read_sectors(0, &mut sector0).is_err() {
+        crate::serial_println!("[STORAGE] ATA Primary Master sector 0 read failed.");
+        return;
+    }
+
+    match partition::DiskPartitionMap::parse(&*ata_dev) {
+        Ok(pt) => {
+            crate::serial_println!("[STORAGE] Detected {} Partition Table on ATA Drive with {} partition(s).",
+                if pt.is_gpt { "GPT" } else { "MBR" },
+                pt.partitions.len()
+            );
+
+            for (i, part) in pt.partitions.iter().enumerate() {
+                crate::serial_println!("          Part #{}: Kind={}, Start LBA={}, Sectors={}",
+                    i + 1, part.fs_kind, part.start_lba, part.sector_count
+                );
+
+                let part_dev = Arc::new(PartitionBlockDevice::new(
+                    ata_dev.clone(),
+                    part.start_lba,
+                    part.sector_count,
+                ));
+
+                // Mount FAT32 partitions to C: and /mnt/ata
+                if part.fs_kind == partition::PartitionFsKind::Fat32 {
+                    if let Ok(()) = mount_fat32(vfs, "C:", part_dev.clone()) {
+                        crate::serial_println!("[STORAGE] Mounted FAT32 Partition #{} to 'C:' and '/mnt/ata'", i + 1);
+                        let _ = mount_fat32(vfs, "/mnt/ata", part_dev.clone());
+                    }
+                } else if part.fs_kind == partition::PartitionFsKind::Ext4 {
+                    if let Ok(()) = mount_ext4(vfs, "/mnt/ext4", part_dev.clone()) {
+                        crate::serial_println!("[STORAGE] Mounted EXT4 Partition #{} to '/mnt/ext4'", i + 1);
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            crate::serial_println!("[STORAGE] MBR/GPT parse error on ATA Drive: {:?}", e);
+        }
+    }
 }
 
 #[cfg(test)]

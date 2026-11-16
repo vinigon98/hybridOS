@@ -159,19 +159,34 @@ pub fn init_early_serial() {
     let _ = port.init();
 }
 
-/// Prints formatted text to the COM1 serial console.
+/// Dual writer sending characters to both COM1 serial port and UEFI GOP Framebuffer.
+pub struct DualConsoleWriter;
+
+impl core::fmt::Write for DualConsoleWriter {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        {
+            use core::fmt::Write;
+            let mut port = COM1.lock();
+            let _ = port.write_str(s);
+        }
+        crate::drivers::gop::gop_print(s);
+        Ok(())
+    }
+}
+
+/// Prints formatted text to the COM1 serial console and GOP Framebuffer.
 #[macro_export]
 macro_rules! serial_print {
     ($($arg:tt)*) => {
         {
             use core::fmt::Write;
-            let mut port = $crate::arch::serial::COM1.lock();
-            let _ = write!(port, $($arg)*);
+            let mut writer = $crate::arch::serial::DualConsoleWriter;
+            let _ = write!(writer, $($arg)*);
         }
     };
 }
 
-/// Prints formatted text with a newline to the COM1 serial console.
+/// Prints formatted text with a newline to the COM1 serial console and GOP Framebuffer.
 #[macro_export]
 macro_rules! serial_println {
     () => {
@@ -180,8 +195,8 @@ macro_rules! serial_println {
     ($($arg:tt)*) => {
         {
             use core::fmt::Write;
-            let mut port = $crate::arch::serial::COM1.lock();
-            let _ = writeln!(port, $($arg)*);
+            let mut writer = $crate::arch::serial::DualConsoleWriter;
+            let _ = writeln!(writer, $($arg)*);
         }
     };
 }

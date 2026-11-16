@@ -82,10 +82,10 @@ impl From<VfsError> for PosixError {
     fn from(err: VfsError) -> Self {
         match err {
             VfsError::NotFound => PosixError::ENOENT,
-            VfsError::AlreadyExists => PosixError::EPERM,
+            VfsError::AlreadyExists => PosixError::EEXIST,
             VfsError::PermissionDenied => PosixError::EACCES,
-            VfsError::NotADirectory => PosixError::EINVAL,
-            VfsError::IsADirectory => PosixError::EINVAL,
+            VfsError::NotADirectory => PosixError::ENOTDIR,
+            VfsError::IsADirectory => PosixError::EISDIR,
             VfsError::DirectoryNotEmpty => PosixError::EINVAL,
             VfsError::InvalidArgument => PosixError::EINVAL,
             VfsError::IoError => PosixError::EIO,
@@ -429,7 +429,13 @@ pub fn init_vfs() -> Result<(), VfsError> {
     vfs.create_dir_all("/c/Program Files (x86)", dir_perms)?;
     vfs.create_dir_all("/c/Users/Administrator", dir_perms)?;
     vfs.create_dir_all("/c/Users/Default", dir_perms)?;
+    vfs.create_dir_all("/c/Users/Public", dir_perms)?;
+    vfs.create_dir_all("/mnt", dir_perms)?;
     vfs.create_dir_all("/d", dir_perms)?;
+
+    // Bilingual VFS Proof File (accessible via /Users/Public/readme.txt, C:\Users\Public\readme.txt, /mnt/c/Users/Public/readme.txt)
+    let readme_content = b"HybridOS Bilingual VFS: Unified Inode accessible simultaneously via Windows (C:\\Users\\Public\\readme.txt) and Linux (/Users/Public/readme.txt)!\n";
+    vfs.create_file("/c/Users/Public/readme.txt", readme_content, Permissions::default_file())?;
 
     // 3. Register Core Character Device Nodes in /dev
     let dev_dir = vfs.lookup_node(&vfs.resolve_path("/dev", "/")?)?;

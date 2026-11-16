@@ -19,13 +19,21 @@ pub mod msr;
 pub mod serial;
 pub mod gdt;
 pub mod idt;
+pub mod percpu;
+pub mod usermode;
+pub mod acpi;
+pub mod apic;
+pub mod smp;
 
 pub use self::serial::{SerialPort, COM1, COM1_BASE, COM2_BASE};
 pub use self::gdt::{
     GlobalDescriptorTable, TaskStateSegment, SegmentSelector,
     KERNEL_CS, KERNEL_DS, USER_CS, USER_DS, TSS_SEL,
 };
-pub use self::idt::{InterruptDescriptorTable, ExceptionStackFrame, PageFaultErrorCode};
+pub use self::idt::{InterruptDescriptorTable, InterruptContext, PageFaultErrorCode};
+pub use self::percpu::{PerCpuData, init_percpu, get_bsp_cpu_data, update_current_cpu_task};
+pub use self::usermode::enter_user_mode;
+pub type ExceptionStackFrame = InterruptContext;
 
 use crate::sync::OnceLock;
 
@@ -90,8 +98,15 @@ pub fn init_arch() -> ArchStatus {
         IDT_INSTANCE.init_default_handlers();
         IDT_INSTANCE.load();
 
+        // Phase 5: Remap PIC and Initialize Hardware Timer (PIT @ 100Hz)
+        idt::init_pic_and_pit();
+
+        // Phase 6: Initialize Hardware Per-CPU Data Block & GS MSRs
+        init_percpu(0);
+
         crate::serial_println!("[ARCH] IDT loaded into CPU (LIDT) with 256 vectors:");
         crate::serial_println!("       - Exception Vectors (#DE, #DB, #NMI, #BP, #UD, #DF, #GP, #PF)");
+        crate::serial_println!("       - Hardware IRQ0 Timer (PIT 100Hz) & IRQ1 Keyboard online");
         crate::serial_println!("       - Windows NT Fast Syscall Trap Gate (INT 0x2E, DPL 3)");
         crate::serial_println!("       - Linux POSIX Syscall Trap Gate (INT 0x80, DPL 3)");
     }
@@ -107,6 +122,23 @@ pub fn init_arch() -> ArchStatus {
 
     let _ = ARCH_STATUS.set(status);
     status
+}
+
+/// Loads the kernel IDT into the calling CPU core (LIDT).
+pub unsafe fn load_kernel_idt() {
+    IDT_INSTANCE.load();
+}
+
+/// Loads the kernel GDT into the calling CPU core (LGDT).
+pub unsafe fn load_kernel_gdt() {
+    GDT_INSTANCE.load();
+}
+
+/// Configures the TSS RSP0 privilege-level stack for Ring 3 -> Ring 0 transitions.
+pub fn set_kernel_stack(stack_top: u64) {
+    unsafe {
+        TSS_INSTANCE.set_rsp0(stack_top);
+    }
 }
 
 /// Returns whether the architecture module has been successfully initialized.

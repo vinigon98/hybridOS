@@ -223,28 +223,95 @@ pub struct BitmapFrameAllocator {
     base_addr: PhysAddr,
     total_frames: usize,
     allocated_frames: usize,
-    bitmap: Vec<u64>,
+    detected_usable_bytes: usize,
+    bitmap: &'static mut [u64],
     next_hint: usize,
 }
 
 impl BitmapFrameAllocator {
     /// Initializes a new physical frame allocator managing memory from `base_addr` for `size` bytes.
-    ///
-    /// # Arguments
-    /// * `base_addr` - Starting physical address (aligned to 4KB).
-    /// * `size` - Total byte size of physical memory region to manage.
-    pub fn new(base_addr: PhysAddr, size: usize) -> Self {
+    pub fn new(bitmap_storage: &'static mut [u64], base_addr: PhysAddr, size: usize) -> Self {
         assert!(base_addr.is_page_aligned(), "Base address must be 4KB aligned");
         let total_frames = size / PAGE_SIZE;
         let num_words = (total_frames + 63) / 64;
+        assert!(num_words <= bitmap_storage.len(), "Bitmap storage too small for requested RAM");
+
+        for i in 0..num_words {
+            bitmap_storage[i] = 0;
+        }
 
         Self {
             base_addr,
             total_frames,
             allocated_frames: 0,
-            bitmap: vec![0u64; num_words],
+            detected_usable_bytes: size,
+            bitmap: &mut bitmap_storage[..num_words],
             next_hint: 0,
         }
+    }
+
+    /// Initializes from Limine memory map entries, marking all USABLE regions as free.
+    pub fn init_from_limine(
+        bitmap_storage: &'static mut [u64],
+        entries: &[*mut crate::boot::LimineMemmapEntry],
+    ) -> Self {
+        let mut max_phys_addr = 0u64;
+        let mut detected_usable_bytes = 0usize;
+
+        for &entry_ptr in entries {
+            if entry_ptr.is_null() { continue; }
+            let entry = unsafe { &*entry_ptr };
+            if entry.typ == crate::boot::LIMINE_MEMMAP_USABLE {
+                detected_usable_bytes += entry.length as usize;
+            }
+            let end = entry.base + entry.length;
+            if end > max_phys_addr {
+                max_phys_addr = end;
+            }
+        }
+
+        let mut total_frames = (max_phys_addr as usize) / PAGE_SIZE;
+        if total_frames > bitmap_storage.len() * 64 {
+            total_frames = bitmap_storage.len() * 64;
+        }
+
+        let words_used = (total_frames + 63) / 64;
+        for i in 0..words_used {
+            bitmap_storage[i] = u64::MAX; // Mark all as allocated by default
+        }
+
+        let mut allocator = Self {
+            base_addr: PhysAddr::new(0),
+            total_frames,
+            allocated_frames: total_frames,
+            detected_usable_bytes,
+            bitmap: &mut bitmap_storage[..words_used],
+            next_hint: 0,
+        };
+
+        // Mark all USABLE regions as free (bit = 0)
+        for &entry_ptr in entries {
+            if entry_ptr.is_null() { continue; }
+            let entry = unsafe { &*entry_ptr };
+            if entry.typ == crate::boot::LIMINE_MEMMAP_USABLE {
+                let start_frame = (entry.base as usize) / PAGE_SIZE;
+                let frame_count = (entry.length as usize) / PAGE_SIZE;
+                for f in start_frame..(start_frame + frame_count) {
+                    if f < total_frames {
+                        let _ = allocator.mark_free(PhysFrame::from_number(f));
+                    }
+                }
+            }
+        }
+
+        // Protect low 1MB (frames 0..256)
+        for f in 0..256 {
+            if f < total_frames {
+                let _ = allocator.mark_allocated(PhysFrame::from_number(f));
+            }
+        }
+
+        allocator
     }
 
     /// Allocates a single 4KB physical frame.
@@ -408,6 +475,37 @@ impl BitmapFrameAllocator {
         Ok(())
     }
 
+    /// Marks a specific physical frame as free.
+    pub fn mark_free(&mut self, frame: PhysFrame) -> Result<(), FrameError> {
+        let frame_addr = frame.start_address().as_u64();
+        let base = self.base_addr.as_u64();
+
+        if frame_addr < base {
+            return Err(FrameError::FrameOutOfBounds(frame.frame_number()));
+        }
+
+        let offset = (frame_addr - base) as usize;
+        let frame_idx = offset / PAGE_SIZE;
+
+        if frame_idx >= self.total_frames {
+            return Err(FrameError::FrameOutOfBounds(frame_idx));
+        }
+
+        let word_idx = frame_idx / 64;
+        let bit_idx = frame_idx % 64;
+
+        if (self.bitmap[word_idx] & (1u64 << bit_idx)) != 0 {
+            self.bitmap[word_idx] &= !(1u64 << bit_idx);
+            self.allocated_frames = self.allocated_frames.saturating_sub(1);
+        }
+
+        if frame_idx < self.next_hint {
+            self.next_hint = frame_idx;
+        }
+
+        Ok(())
+    }
+
     /// Marks a range of physical memory as allocated (e.g., kernel image or ACPI tables).
     pub fn mark_range_allocated(&mut self, start: PhysAddr, size: usize) -> Result<(), FrameError> {
         let start_frame = PhysFrame::containing_address(start);
@@ -444,6 +542,12 @@ impl BitmapFrameAllocator {
         let bit_idx = frame_idx % 64;
 
         (self.bitmap[word_idx] & (1u64 << bit_idx)) != 0
+    }
+
+    /// Returns the exact usable physical RAM in bytes reported by the bootloader.
+    #[inline]
+    pub const fn detected_usable_memory(&self) -> usize {
+        self.detected_usable_bytes
     }
 
     /// Returns the total number of 4KB frames managed by this allocator.
@@ -487,6 +591,10 @@ impl BitmapFrameAllocator {
 mod tests {
     use super::*;
 
+    static mut TEST_BITMAP1: [u64; 1024] = [0; 1024];
+    static mut TEST_BITMAP2: [u64; 1024] = [0; 1024];
+    static mut TEST_BITMAP3: [u64; 1024] = [0; 1024];
+
     #[test]
     fn test_phys_addr_alignment() {
         let addr = PhysAddr::new(0x1000);
@@ -499,7 +607,7 @@ mod tests {
     #[test]
     fn test_frame_alloc_and_free() {
         // Manage 1 MB = 256 frames
-        let mut allocator = BitmapFrameAllocator::new(PhysAddr::new(0x100000), 256 * PAGE_SIZE);
+        let mut allocator = unsafe { BitmapFrameAllocator::new(&mut TEST_BITMAP1, PhysAddr::new(0x100000), 256 * PAGE_SIZE) };
         assert_eq!(allocator.total_frames(), 256);
         assert_eq!(allocator.free_frames(), 256);
 
@@ -522,7 +630,7 @@ mod tests {
 
     #[test]
     fn test_contiguous_allocation() {
-        let mut allocator = BitmapFrameAllocator::new(PhysAddr::new(0), 128 * PAGE_SIZE);
+        let mut allocator = unsafe { BitmapFrameAllocator::new(&mut TEST_BITMAP2, PhysAddr::new(0), 128 * PAGE_SIZE) };
         let block = allocator.allocate_contiguous(4).expect("Contiguous alloc failed");
         assert_eq!(block.start_address(), PhysAddr::new(0));
         assert_eq!(allocator.allocated_frames(), 4);
@@ -533,7 +641,7 @@ mod tests {
 
     #[test]
     fn test_reservation() {
-        let mut allocator = BitmapFrameAllocator::new(PhysAddr::new(0), 64 * PAGE_SIZE);
+        let mut allocator = unsafe { BitmapFrameAllocator::new(&mut TEST_BITMAP3, PhysAddr::new(0), 64 * PAGE_SIZE) };
         let reserved_frame = PhysFrame::from_start_address(PhysAddr::new(0x2000)).unwrap();
         allocator.mark_allocated(reserved_frame).unwrap();
 
@@ -543,7 +651,6 @@ mod tests {
         let f2 = allocator.allocate_frame().unwrap();
         let f3 = allocator.allocate_frame().unwrap();
 
-        // 0x0000, 0x1000 should be allocated, then 0x2000 was reserved, so f3 is 0x3000
         assert_eq!(f1.start_address(), PhysAddr::new(0x0000));
         assert_eq!(f2.start_address(), PhysAddr::new(0x1000));
         assert_eq!(f3.start_address(), PhysAddr::new(0x3000));
