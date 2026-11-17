@@ -1,0 +1,105 @@
+# /etc/hybridos/system.toml — Configuração Base do Hybridos OS
+#
+# Arquivo mestre de configuração declarativa. Gerido pelo utilitário `hybctl`
+# e exposto graficamente pelo `hyb-settings`. Todos os 100 módulos de
+# configuração (~1.000 parâmetros) residem em /etc/hybridos/; este arquivo
+# contempla os Módulos 1 a 5 (52 parâmetros) implementados pelo Agente 6.
+#
+# Formato: TOML. Chaves são acessíveis por `hybctl` através do nome pontuado:
+#   hybctl get display.refresh_rate
+#   hybctl set input.mouse.raw_input true
+#
+# Valores otimizados por padrão para produtividade e performance (conforme a
+# Especificação Arquitetural do Hybridos OS).
+
+# ============================================================
+# Módulo 1 — Compositor de Vídeo, Monitores e Pipeline Gráfico (12)
+# ============================================================
+
+[display]
+refresh_rate = 144
+scaling = "100%"
+multi_monitor = true
+night_light = false
+hdr_pipeline = true
+disable_cabc = true
+
+[graphics]
+scheduler_hags = true
+direct_scanout = true
+gpu_preference = "hybrid"
+tdr_recovery = true
+legacy_dpi_fix = true
+frame_limiter_global = 0
+
+# ============================================================
+# Módulo 2 — Subsistema de Áudio Pro-Audio e Gamer (8)
+# ============================================================
+
+[audio]
+devices_profile = "auto"
+bit_perfect = true
+quantum_buffer = 128
+lock_mic_gain = true
+ducking = false
+rnnoise_filter = false
+per_app_routing = true
+system_sounds = false
+
+# ============================================================
+# Módulo 3 — Input de Latência Zero: Mouse, Teclado e Periféricos (10)
+# ============================================================
+
+[input.mouse]
+raw_input = true
+polling_rate_support = 1000
+scroll_inactive = true
+middle_click_paste = false
+
+[input.keyboard]
+repeat_rate = 35
+no_sticky_keys = true
+remap_caps = "default"
+clean_layout = true
+
+[input.touchpad]
+gestures = true
+
+[input.usb]
+no_autosuspend = true
+
+# ============================================================
+# Módulo 4 — Gerenciamento de Energia, Agendador de CPU e Térmicas (8)
+# ============================================================
+
+[power]
+profile = "balanced"
+pcie_aspm = false
+cpu_scheduler = "topology_aware"
+boost_control = true
+clean_shutdown = true
+hibernation = false
+battery_charge_limit = 80
+disk_spindown = false
+
+# ============================================================
+# Módulo 5 — Shell Gráfico, Janelas e Explorador de Arquivos (14)
+# ============================================================
+
+[files]
+show_extensions = true
+show_dotfiles = false
+default_view = "home"
+zero_ads = true
+header_path = true
+
+[shell]
+context_menu = "classic_full"
+taskbar_clean = true
+panel_position = "bottom"
+force_kill_shortcut = true
+launcher = "super_space"
+window_tiling = false
+virtual_desktops = true
+compositor_effects = true
+tray_telemetry = false
