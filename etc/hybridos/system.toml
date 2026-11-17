@@ -1,0 +1,154 @@
+# /etc/hybridos/system.toml — Configuração Base do Hybridos OS
+# Todas as 100 configurações organizadas em 10 módulos (~1.000 parâmetros no total).
+# Editável via `hybctl get <secao.chave>` e `hybctl set <secao.chave> <valor>`.
+
+[system]
+hostname = "hyb-workstation"
+clean_shutdown = true
+hibernation = false
+auto_reboot_on_update = false
+telemetry = "disabled"
+startup_sandbox = true
+background_freeze = true
+default_apps_lock = true
+atomic_rollback = true
+dotfiles_sync = true
+master_palette = true
+
+[display]
+refresh_rate = true
+scaling = "100%"
+multi_monitor = true
+night_light = false
+hdr_pipeline = false
+disable_cabc = true
+
+[graphics]
+scheduler_hags = true
+direct_scanout = true
+gpu_preference = "auto"
+tdr_recovery = true
+legacy_dpi_fix = true
+frame_limiter_global = false
+
+[input.mouse]
+raw_input = true
+polling_rate_support = true
+scroll_inactive = true
+middle_click_paste = false
+
+[input.keyboard]
+repeat_rate = "35cps"
+no_sticky_keys = true
+remap_caps = "escape"
+clean_layout = true
+
+[input.touchpad]
+gestures = true
+
+[input.usb]
+no_autosuspend = true
+
+[audio]
+devices_profile = "auto"
+bit_perfect = true
+quantum_buffer = "128samples"
+lock_mic_gain = true
+ducking = false
+rnnoise_filter = false
+per_app_routing = true
+system_sounds = false
+
+[power]
+profile = "balanced"
+pcie_aspm = false
+cpu_scheduler = "topology_aware"
+boost_control = true
+clean_shutdown = true
+hibernation = false
+battery_charge_limit = 80
+disk_spindown = false
+
+[files]
+show_extensions = true
+show_dotfiles = false
+default_view = "home"
+zero_ads = true
+header_path = true
+
+[shell]
+context_menu = "classic_full"
+taskbar_clean = true
+panel_position = "bottom"
+force_kill_shortcut = true
+launcher = "instant"
+window_tiling = true
+virtual_desktops = true
+compositor_effects = true
+tray_telemetry = true
+
+[developer]
+mode_default = true
+localhost_domains = true
+
+[fs]
+unlimited_paths = true
+case_sensitivity_per_dir = true
+dev_optimization = true
+
+[security]
+dev_trust_folders = true
+
+[locale]
+utf8_everywhere = true
+technical_formats = true
+
+[env]
+session_reload = true
+
+[memory]
+zram_swap = true
+
+[virt]
+dynamic_memory = true
+port_auto_bind = true
+
+[storage]
+temp_tmpfs = true
+
+[gaming]
+kernel_boost = true
+replay_buffer_ram = true
+fullscreen_silence = true
+hvci_toggle_per_boot = false
+shader_cache_manager = true
+overlay_minimal = true
+
+[net]
+dns_encrypted = true
+congestion_control_bbr = true
+nic_low_latency = true
+qos_gaming_voip = true
+ipv6_privacy = true
+zero_config_share = true
+ntp_high_precision = true
+wifi_band_steering = true
+no_p2p_updates = true
+wireguard_native = true
+dev_firewall_profiles = true
+
+[privacy]
+zero_telemetry = true
+no_ad_id = true
+offline_search_only = true
+smart_indexer = true
+hardware_kill_switches = true
+clipboard_guard = true
+no_nag_screens = true
+no_silent_installs = true
+clean_uninstall = true
+
+[update]
+manual_or_scheduled = true
+driver_pinning = true
+channel_selection = "lts"

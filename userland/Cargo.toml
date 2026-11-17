@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "libhybrid_sys",
+    "apps/hybctl",
+    "apps/hyb-settings",
+]
+resolver = "2"
