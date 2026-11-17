@@ -7,5 +7,4 @@ edition = "2021"
 name = "hybctl"
 path = "src/main.rs"
 
-[dependencies]
-libhybrid_sys = { path = "../../libhybrid_sys" }
+[workspace]
