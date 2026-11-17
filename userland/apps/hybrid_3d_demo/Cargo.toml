@@ -1,0 +1,12 @@
+[package]
+name = "hybrid_3d_demo"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "hybrid_3d_demo"
+path = "src/main.rs"
+
+[dependencies]
+libhybrid_sys = { path = "../../libhybrid_sys" }
+nt_dlls = { path = "../../nt_dlls" }
