@@ -16,6 +16,7 @@ pub mod desktop;
 pub mod gfx2d;
 pub mod hda;
 pub mod apps_cat1_files;
+pub mod apps;
 pub mod apps_cat2_admin;
 pub mod apps_cat3_exec;
 pub mod apps_cat5_office;

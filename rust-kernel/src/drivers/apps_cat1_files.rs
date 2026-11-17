@@ -942,7 +942,18 @@ fn handle_superbar_click(rx: usize, ry: usize, cw: usize, ch: usize, _desk: &mut
     // Action Buttons checked first so they can never collide with grid items
     if ry >= act_y && ry <= act_y + 28 {
         if rx >= 20 && rx <= 160 {
-            state.superbar_status_msg = String::from("Ajustes da Superbarra aplicados com sucesso.");
+            // Persistir configuracoes da superbarra no VFS (operacao real de arquivo)
+            let cfg = format!(
+                "height={}\nmenu_style={}\nglass_blur={}\nemblem_glow={}\nmouse_tracking={}\nshow_desktop_strip={}\n",
+                state.superbar_height,
+                state.superbar_menu_style,
+                state.superbar_glass_blur as u8,
+                state.superbar_emblem_glow as u8,
+                state.superbar_mouse_tracking as u8,
+                state.superbar_show_desktop_strip as u8,
+            );
+            let _ = vfs::vfs_create_file("/etc/superbar.conf", cfg.as_bytes(), Permissions::from_mode(0o644));
+            state.superbar_status_msg = String::from("Ajustes da Superbarra aplicados e salvos em /etc/superbar.conf.");
             return true;
         }
         if rx >= 170 && rx <= 310 {
@@ -1362,6 +1373,39 @@ fn handle_archive_click(rx: usize, ry: usize, cw: usize, ch: usize, desk: &mut D
 // 05. Disk & Partition Manager (Gerenciador de Discos e Partições)
 // ============================================================================
 
+/// Entrada de particao da tabela MBR (16 bytes em cada entrada, a partir do offset 0x1BE).
+#[derive(Clone, Copy)]
+struct MbrPartEntry {
+    bootable: bool,
+    part_type: u8,
+    lba_start: u32,
+    sectors: u32,
+}
+
+/// Faz o parse real das 4 entradas de particao da tabela MBR do setor 0 fornecido.
+/// Retorna None para entradas vazias (tipo 0) e para todos quando falta assinatura 0x55AA.
+fn parse_mbr_partitions(buf: &[u8; 512]) -> [Option<MbrPartEntry>; 4] {
+    let mut out: [Option<MbrPartEntry>; 4] = [None; 4];
+    if buf[510] == 0x55 && buf[511] == 0xAA {
+        for i in 0..4 {
+            let off = 0x1BE + i * 16;
+            let bootable = buf[off] == 0x80;
+            let part_type = buf[off + 4];
+            let lba_start = u32::from_le_bytes([buf[off + 8], buf[off + 9], buf[off + 10], buf[off + 11]]);
+            let sectors = u32::from_le_bytes([buf[off + 12], buf[off + 13], buf[off + 14], buf[off + 15]]);
+            if part_type != 0 || lba_start != 0 || sectors != 0 {
+                out[i] = Some(MbrPartEntry {
+                    bootable,
+                    part_type,
+                    lba_start,
+                    sectors,
+                });
+            }
+        }
+    }
+    out
+}
+
 unsafe fn render_disk_partition_manager(
     fb: *mut u8, pitch: usize, scr_w: usize, scr_h: usize,
     cx: usize, cy: usize, cw: usize, ch: usize,
@@ -1424,7 +1468,12 @@ unsafe fn render_disk_partition_manager(
 
     // LBA Sector Hex Dump Preview
     let dump_y = diag_y + 68;
-    let dump_title = format!("Inspecao de Setor LBA: {} (Assinatura MBR 0x55AA presente)", state.disk_lba_inspect);
+    let mbr_sig_ok = state.disk_sector_buffer[510] == 0x55 && state.disk_sector_buffer[511] == 0xAA;
+    let dump_title = format!(
+        "Inspecao de Setor LBA: {} (MBR 0x55AA {})",
+        state.disk_lba_inspect,
+        if mbr_sig_ok { "valida" } else { "ausente" }
+    );
     draw_text_px(fb, pitch, scr_w, scr_h, cx + 10, dump_y, &dump_title, 0x000F172A, None);
 
     fill_rounded_rect(fb, pitch, scr_w, scr_h, cx + 10, dump_y + 18, cw.saturating_sub(20), 40, 2, 0x00F8FAFC);
@@ -1441,6 +1490,29 @@ unsafe fn render_disk_partition_manager(
     }
     draw_text_px(fb, pitch, scr_w, scr_h, cx + 16, dump_y + 22, &hex1, 0x001E293B, None);
     draw_text_px(fb, pitch, scr_w, scr_h, cx + 16, dump_y + 38, &hex2, 0x001E293B, None);
+
+    // Particoes MBR reais (parse das 4 entradas da tabela a partir do offset 0x1BE)
+    let parts = parse_mbr_partitions(&state.disk_sector_buffer);
+    let parts_y = dump_y + 60;
+    draw_text_px(fb, pitch, scr_w, scr_h, cx + 10, parts_y, "Particoes MBR (setor 0):", 0x001E3A8A, None);
+    let mut p_y = parts_y + 18;
+    for (i, p) in parts.iter().enumerate() {
+        if let Some(pe) = p {
+            let line = format!(
+                "Part {}: boot={} tipo=0x{:02X} LBA_inicio={} setores={}",
+                i,
+                if pe.bootable { "sim" } else { "nao" },
+                pe.part_type,
+                pe.lba_start,
+                pe.sectors,
+            );
+            draw_text_px(fb, pitch, scr_w, scr_h, cx + 14, p_y, &line, 0x001E293B, None);
+        } else {
+            let line = format!("Part {}: vazia", i);
+            draw_text_px(fb, pitch, scr_w, scr_h, cx + 14, p_y, &line, 0x0064748B, None);
+        }
+        p_y += 16;
+    }
 
     // Sector Nav buttons
     let nav_y = body_y + body_h.saturating_sub(44);
