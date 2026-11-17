@@ -1,0 +1,13 @@
+[package]
+name = "hyb-audio-ctl"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "hyb-audio-ctl"
+path = "src/main.rs"
+
+[dependencies]
+libhybrid_sys = { path = "../../libhybrid_sys" }
+
+

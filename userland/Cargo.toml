@@ -1,0 +1,29 @@
+[workspace]
+members = [
+    "libhybrid_sys",
+    # Agente 3 - binarios 39-60 (Monitoramento, Hardware, Performance Gamer)
+    "apps/hyb-top",
+    "apps/hyb-resmon",
+    "apps/hyb-telemetry-local",
+    "apps/hyb-crashlog",
+    "apps/hyb-gpuinfo",
+    "apps/hyb-hwinfo",
+    "apps/hyb-devices",
+    "apps/hyb-logs",
+    "apps/hyb-memtest",
+    "apps/hyb-driver-check",
+    "apps/ps",
+    "apps/kill",
+    "apps/pkill",
+    "apps/hyb-power",
+    "apps/hyb-joy",
+    "apps/hyb-audio-ctl",
+    "apps/hyb-mixer",
+    "apps/hyb-color",
+    "apps/hyb-font-tune",
+    "apps/hyb-perf-ui",
+    "apps/hyb-env",
+    "apps/hyb-bootcfg",
+    "apps/hyb-reboot",
+]
+resolver = "2"
