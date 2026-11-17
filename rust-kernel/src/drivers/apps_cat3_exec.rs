@@ -18,12 +18,15 @@ use alloc::vec::Vec;
 #[allow(unused_imports)]
 use alloc::vec;
 
+use crate::arch::idt::SYSTEM_TICKS;
 use crate::drivers::desktop::{DesktopState, AppId, draw_text_clipped, draw_text_px};
 use crate::drivers::gfx2d::*;
 use crate::drivers::pop_keyboard_char;
 use crate::personality::ExecutionPersonality;
-use crate::vfs::{self, Permissions};
+use crate::security::sha256::sha256_hex;
 use crate::sync::SpinLock;
+use core::sync::atomic::Ordering;
+use crate::vfs::{self, Permissions};
 use crate::loaders::{spawn_elf_process, spawn_pe_process};
 use crate::userland::shell::{create_synthetic_elf, create_synthetic_pe, HybridShell, ShellFlavor};
 
@@ -953,9 +956,10 @@ unsafe fn render_terminal_trishell(
     let input_col = if state.term_input.is_empty() { 0x0064748B } else { 0x00FFFFFF };
     draw_text_clipped(fb, pitch, scr_w, scr_h, input_field_x, input_y + 8, cx + cw - 95, input_display, input_col, None);
 
-    // Blinking cursor indication
+    // Blinking cursor indication based on SYSTEM_TICKS
+    let cursor_visible = SYSTEM_TICKS.load(Ordering::Relaxed) % 2 == 0;
     let cursor_x = input_field_x + (if state.term_input.is_empty() { 0 } else { state.term_input.len() * 8 });
-    if cursor_x + 2 < cx + cw - 95 {
+    if cursor_visible && cursor_x + 2 < cx + cw - 95 {
         for cy_step in (input_y + 6)..(input_y + 22) {
             if cy_step < scr_h {
                 let p = fb.add(cy_step * pitch) as *mut u32;
@@ -1575,7 +1579,10 @@ fn advance_wizard_step(desk: &mut DesktopState) {
             let perms = Permissions::from_mode(0o755);
             vfs::vfs_create_dir_all(&state.wizard_target_dir, perms).ok();
             let mf_path = format!("{}/package.manifest", state.wizard_target_dir);
-            vfs::vfs_create_file(&mf_path, b"HybridOS Suite Manifest v1.0\nComponents: Core, Runtime, Drivers\n", perms).ok();
+            let mf_data = b"HybridOS Suite Manifest v1.0\nComponents: Core, Runtime, Drivers\n";
+            vfs::vfs_create_file(&mf_path, mf_data, perms).ok();
+            let mf_hash = sha256_hex(mf_data);
+            state.wizard_status = format!("Gravado: {} (SHA-256: {})", mf_path, &mf_hash[..16]);
         }
         _ => {
             if state.wizard_progress < 100 {
@@ -1586,19 +1593,23 @@ fn advance_wizard_step(desk: &mut DesktopState) {
                         let pe_data = create_synthetic_pe();
                         let p1 = format!("{}/hybridos_core.dll", state.wizard_target_dir);
                         vfs::vfs_create_file(&p1, &pe_data, perms).ok();
-                        state.wizard_status = format!("Extraido: {} (PE32+ 64-bit OK)", p1);
+                        let h1 = sha256_hex(&pe_data);
+                        state.wizard_status = format!("Extraido: {} (PE32+ 64-bit OK | SHA-256: {})", p1, &h1[..16]);
                     }
                     75 => {
                         let elf_data = create_synthetic_elf();
                         let p2 = format!("{}/hybridos_daemon.elf", state.wizard_target_dir);
                         vfs::vfs_create_file(&p2, &elf_data, perms).ok();
-                        state.wizard_status = format!("Extraido: {} (Linux ELF64 OK)", p2);
+                        let h2 = sha256_hex(&elf_data);
+                        state.wizard_status = format!("Extraido: {} (Linux ELF64 OK | SHA-256: {})", p2, &h2[..16]);
                     }
                     _ => {
                         state.wizard_progress = 100;
                         let p3 = format!("{}/readme.txt", state.wizard_target_dir);
-                        vfs::vfs_create_file(&p3, b"HybridOS Package instalado com sucesso!\n", perms).ok();
-                        state.wizard_status = String::from("Extracao 100% concluida! Todos os arquivos foram sincronizados no VFS.");
+                        let r3 = b"HybridOS Package instalado com sucesso!\n";
+                        vfs::vfs_create_file(&p3, r3, perms).ok();
+                        let h3 = sha256_hex(r3);
+                        state.wizard_status = format!("Extracao 100% concluida! Todos os arquivos sincronizados no VFS. (readme.txt SHA-256: {})", &h3[..16]);
                     }
                 }
             } else {
