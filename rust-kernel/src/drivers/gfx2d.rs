@@ -1620,9 +1620,10 @@ pub unsafe fn draw_crystal_glass_window_frame(
     // 1. Soft drop shadow under the window
     draw_soft_drop_shadow(fb, pitch, scr_w, scr_h, x, y, w, h, 6, 8, 4, 45);
 
-    // 2. Base sapphire glass tint & specular reflections
-    let tint_color = if active { 0x00163254 } else { 0x003C4B5C };
-    let tint_alpha = if active { 150u8 } else { 110u8 };
+    // 2. Base glass tint & specular reflections (bound live to Personalization Studio #47)
+    let theme = crate::drivers::apps_cat6_media::get_current_theme();
+    let tint_color = if active { theme.frame_active_color } else { theme.frame_inactive_color };
+    let tint_alpha = if active { theme.glass_opacity } else { theme.glass_opacity.saturating_sub(40) };
     let streak_alpha = 36u8; // ~14% specular reflection
 
     let r_sq = (6 * 6) as isize;
@@ -1868,15 +1869,16 @@ pub unsafe fn draw_vitrified_superbar(
         }
     }
 
-    // 2. Top 1px luminous accent line
+    // 2. Top 1px luminous accent line (live theme accent from Personalization Studio #47)
+    let theme_accent = crate::drivers::apps_cat6_media::get_current_theme().accent_color;
     let top_row = fb.add(bar_top * pitch) as *mut u32;
     for px in 0..scr_w {
-        *top_row.add(px) = 0x0038BDF8;
+        *top_row.add(px) = theme_accent;
     }
 
     // 3. Rightmost 15px "Show Desktop" Peek Strip
     let peek_x = scr_w.saturating_sub(15);
-    let peek_bg = if peek_hover { 0x0038BDF8 } else { 0x001E293B };
+    let peek_bg = if peek_hover { theme_accent } else { 0x001E293B };
     for py in (bar_top + 1)..scr_h {
         let row_ptr = fb.add(py * pitch) as *mut u32;
         // 1px left divider line
@@ -1901,7 +1903,7 @@ pub unsafe fn draw_asymmetric_start_menu(
     scr_h: usize,
     menu_x: usize,
     menu_y: usize,
-    _search_query: &str,
+    search_query: &str,
 ) {
     let menu_w = 420usize;
     let menu_h = 500usize;
@@ -2013,6 +2015,25 @@ pub unsafe fn draw_asymmetric_start_menu(
         }
     }
 
+    // Render live search_query (or placeholder when empty) inside search box
+    if search_query.is_empty() {
+        crate::drivers::desktop::draw_text_clipped(
+            fb, pitch, scr_w, scr_h,
+            s_x + 28, s_y + 7, s_x + s_w - 6,
+            "Pesquisar programas...",
+            0x0064748B, None,
+        );
+    } else {
+        let mut q_disp = alloc::string::String::from(search_query);
+        q_disp.push('_');
+        crate::drivers::desktop::draw_text_clipped(
+            fb, pitch, scr_w, scr_h,
+            s_x + 28, s_y + 7, s_x + s_w - 6,
+            &q_disp,
+            0x000F172A, None,
+        );
+    }
+
     // 8. Right Column: Split Power Button [ Desligar | ▸ ] at bottom
     let btn_x = menu_x + col_left_w + 12;
     let btn_y = menu_y + menu_h - 42;
@@ -2034,3 +2055,122 @@ pub unsafe fn draw_asymmetric_start_menu(
         *ptr.add(split_x) = 0x000C4A6E;
     }
 }
+
+/// Renders a top Ice-Blue Gradient Glass Toolbar (#EBF3FC -> #D9E7F8) with subtle bottom divider.
+pub unsafe fn draw_glass_toolbar(
+    fb: *mut u8, pitch: usize, scr_w: usize, scr_h: usize,
+    x: usize, y: usize, w: usize, h: usize,
+) {
+    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, x, y, w, h, 0, 0x00EBF3FC, 0x00D9E7F8);
+    // 1px bottom dividing stroke
+    let div_y = y + h - 1;
+    if div_y < scr_h {
+        let row_ptr = fb.add(div_y * pitch) as *mut u32;
+        let x_end = (x + w).min(scr_w);
+        for px in x..x_end {
+            *row_ptr.add(px) = 0x00CBD5E1;
+        }
+    }
+}
+
+/// Renders a 22px Pearl-Gray Status Bar (#F1F5F9) along the bottom with vertical dividers.
+pub unsafe fn draw_glass_statusbar(
+    fb: *mut u8, pitch: usize, scr_w: usize, scr_h: usize,
+    x: usize, y: usize, w: usize, h: usize,
+    left_text: &str, right_text: &str,
+) {
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, x, y, w, h, 0, 0x00F1F5F9);
+    // Top border line
+    if y < scr_h {
+        let row_ptr = fb.add(y * pitch) as *mut u32;
+        let x_end = (x + w).min(scr_w);
+        for px in x..x_end {
+            *row_ptr.add(px) = 0x00E2E8F0;
+        }
+    }
+    // Left text
+    draw_text_clipped(fb, pitch, scr_w, scr_h, x + 8, y + 4, x + w / 2, left_text, 0x00475569, None);
+    // Vertical divider at mid
+    let div_x = x + w / 2;
+    for py in (y + 3)..(y + h - 3) {
+        if py < scr_h && div_x < scr_w {
+            let row_ptr = fb.add(py * pitch) as *mut u32;
+            *row_ptr.add(div_x) = 0x00CBD5E1;
+        }
+    }
+    // Right text
+    if !right_text.is_empty() {
+        draw_text_clipped(fb, pitch, scr_w, scr_h, div_x + 8, y + 4, x + w - 8, right_text, 0x0064748B, None);
+    }
+}
+
+/// Renders a convex vitrified Crystal Glass button with 3D bevel and centered text.
+pub unsafe fn draw_glass_button(
+    fb: *mut u8, pitch: usize, scr_w: usize, scr_h: usize,
+    bx: usize, by: usize, bw: usize, bh: usize,
+    text: &str, active: bool,
+) {
+    let (c_top, c_bot) = if active {
+        (0x00BAE6FD, 0x0038BDF8)
+    } else {
+        (0x00FFFFFF, 0x00E2E8F0)
+    };
+    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, bx, by, bw, bh, 4, c_top, c_bot);
+    draw_rounded_rect_border(fb, pitch, scr_w, scr_h, bx, by, bw, bh, 4, if active { 0x000284C7 } else { 0x0094A3B8 });
+    let text_x = bx + (bw.saturating_sub(text.len() * 8)) / 2;
+    let text_y = by + (bh.saturating_sub(16)) / 2;
+    let text_col = if active { 0x000C4A6E } else { 0x001E293B };
+    draw_text_clipped(fb, pitch, scr_w, scr_h, text_x, text_y, bx + bw - 2, text, text_col, None);
+}
+
+/// Renders a window tab for multi-tab application dialogs.
+pub unsafe fn draw_glass_tab(
+    fb: *mut u8, pitch: usize, scr_w: usize, scr_h: usize,
+    tx: usize, ty: usize, tw: usize, th: usize,
+    text: &str, is_active: bool,
+) {
+    let bg = if is_active { 0x00FFFFFF } else { 0x00E2E8F0 };
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, tx, ty, tw, th, 4, bg);
+    draw_rounded_rect_border(fb, pitch, scr_w, scr_h, tx, ty, tw, th, 4, if is_active { 0x000284C7 } else { 0x0094A3B8 });
+    let col = if is_active { 0x000284C7 } else { 0x0064748B };
+    let text_x = tx + (tw.saturating_sub(text.len() * 8)) / 2;
+    let text_y = ty + (th.saturating_sub(16)) / 2;
+    draw_text_clipped(fb, pitch, scr_w, scr_h, text_x, text_y, tx + tw - 2, text, col, None);
+}
+
+/// Renders an editable-style text box or search input field with subtle border.
+pub unsafe fn draw_glass_textbox(
+    fb: *mut u8, pitch: usize, scr_w: usize, scr_h: usize,
+    bx: usize, by: usize, bw: usize, bh: usize,
+    text: &str, is_focused: bool,
+) {
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, bx, by, bw, bh, 3, 0x00FFFFFF);
+    draw_rounded_rect_border(fb, pitch, scr_w, scr_h, bx, by, bw, bh, 3, if is_focused { 0x0038BDF8 } else { 0x00CBD5E1 });
+    let text_y = by + (bh.saturating_sub(16)) / 2;
+    draw_text_clipped(fb, pitch, scr_w, scr_h, bx + 6, text_y, bx + bw - 6, text, 0x000F172A, None);
+}
+
+/// Renders a vitrified progress bar with percent fill and shine.
+pub unsafe fn draw_glass_progressbar(
+    fb: *mut u8, pitch: usize, scr_w: usize, scr_h: usize,
+    bx: usize, by: usize, bw: usize, bh: usize,
+    percent: usize, color_grad_top: u32, color_grad_bot: u32,
+) {
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, bx, by, bw, bh, 4, 0x00E2E8F0);
+    draw_rounded_rect_border(fb, pitch, scr_w, scr_h, bx, by, bw, bh, 4, 0x0094A3B8);
+    let clamped_pct = percent.min(100);
+    let fill_w = (bw.saturating_sub(2) * clamped_pct) / 100;
+    if fill_w > 0 {
+        fill_rounded_rect_gradient(
+            fb, pitch, scr_w, scr_h,
+            bx + 1, by + 1, fill_w, bh - 2,
+            3, color_grad_top, color_grad_bot,
+        );
+    }
+}
+
+// =============================================================================
+// CRYSTAL UI — IMMEDIATE-MODE COMPONENT MOTOR RE-EXPORT
+// =============================================================================
+
+pub use crate::drivers::ui_widgets::*;

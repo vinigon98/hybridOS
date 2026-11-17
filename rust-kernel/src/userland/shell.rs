@@ -759,10 +759,17 @@ impl HybridShell {
                 self.last_exit_code = 0;
                 self.cmd_set(args)
             }
-            "run" | "exec" | "start" => {
+            "apps" => {
+                self.last_exit_code = 0;
+                crate::drivers::desktop::list_all_apps_text()
+            }
+            "run" | "exec" | "start" | "open" => {
                 if args.is_empty() {
                     self.last_exit_code = 1;
-                    "run: missing binary path. Syntax: run <path/to/binary>".to_string()
+                    "start/run: informe o nome de um aplicativo (ex: 'start calc', 'apps') ou caminho de binario.".to_string()
+                } else if let Some(title) = crate::drivers::desktop::launch_app_by_name(&args[0]) {
+                    self.last_exit_code = 0;
+                    format!("[Desktop] Aplicativo aberto: {}", title)
                 } else {
                     match self.cmd_run(&args[0]) {
                         Ok(out) => {
@@ -789,8 +796,13 @@ impl HybridShell {
                 "Session terminated. Kernel returning to ring-0 control.".to_string()
             }
             _ => {
-                self.last_exit_code = 127;
-                format!("{}: command not found. Type 'help' or 'Get-Command' for available commands.", cmd)
+                if let Some(title) = crate::drivers::desktop::launch_app_by_name(cmd) {
+                    self.last_exit_code = 0;
+                    format!("[Desktop] Aplicativo aberto: {}", title)
+                } else {
+                    self.last_exit_code = 127;
+                    format!("{}: command not found. Type 'help', 'apps' or 'Get-Command' for available commands.", cmd)
+                }
             }
         }
     }

@@ -272,7 +272,9 @@ pub extern "C" fn _start() -> ! {
         let mut byte_opt = arch::serial::COM1.lock().receive();
         if byte_opt.is_none() {
             if let Some(c) = drivers::pop_keyboard_char() {
-                byte_opt = Some(c as u8);
+                if !drivers::desktop::dispatch_focused_app_key(c) {
+                    byte_opt = Some(c as u8);
+                }
             }
         }
 
@@ -846,10 +848,8 @@ fn run_desktop_and_subsystem_self_tests(shell: &mut userland::shell::HybridShell
     {
         let mut desk_lock = drivers::desktop::DESKTOP.lock();
         if let Some(ref mut desk) = *desk_lock {
-            assert!(desk.windows.len() >= 9, "Expected at least 9 native desktop windows");
-            desk.focused_app = drivers::desktop::AppId::FileExplorer;
-            desk.windows[1].open = true;
-            desk.windows[1].minimized = false;
+            assert_eq!(desk.windows.len(), 50, "Expected all 50 Tier-0 native desktop windows");
+            desk.open_window(drivers::desktop::AppId::FileExplorer);
         }
     }
     crate::serial_println!("[TEST_OK] GFX_WINDOW_MANAGER_DYNAMIC");
@@ -965,5 +965,60 @@ fn run_desktop_and_subsystem_self_tests(shell: &mut userland::shell::HybridShell
     assert_eq!(destroy_stat, types::NtStatus::SUCCESS, "Win32 DestroyWindow must succeed");
 
     crate::serial_println!("[TEST_OK] WIN32K_GRAPHICAL_SUBSYSTEM");
-    crate::serial_println!(">>> ALL HYBRIDOS AUTONOMOUS LOOP PHASES A, B & C PASSED DETERMINISTICALLY! <<<\n");
+
+    // =========================================================================
+    // FASE D: 50 PROGRAMAS NATIVOS DE NÍVEL 0 (CATEGORIAS 1 A 7)
+    // =========================================================================
+    let mut total_apps_verified = 0usize;
+
+    let c1 = drivers::desktop::verify_category_apps(1);
+    assert_eq!(c1, 8, "Category 1 must verify all 8 file/shell apps");
+    total_apps_verified += c1;
+    crate::serial_println!("[TEST_OK] TIER0_APPS_CAT_1");
+
+    let c2 = drivers::desktop::verify_category_apps(2);
+    assert_eq!(c2, 10, "Category 2 must verify all 10 admin/monitoring apps");
+    total_apps_verified += c2;
+    crate::serial_println!("[TEST_OK] TIER0_APPS_CAT_2");
+
+    let c3 = drivers::desktop::verify_category_apps(3);
+    assert_eq!(c3, 7, "Category 3 must verify all 7 exec/store apps");
+    total_apps_verified += c3;
+    crate::serial_println!("[TEST_OK] TIER0_APPS_CAT_3");
+
+    let c4 = drivers::desktop::verify_category_apps(4);
+    assert_eq!(c4, 8, "Category 4 must verify all 8 network/security apps");
+    total_apps_verified += c4;
+    crate::serial_println!("[TEST_OK] TIER0_APPS_CAT_4");
+
+    let c5 = drivers::desktop::verify_category_apps(5);
+    assert_eq!(c5, 8, "Category 5 must verify all 8 office/productivity apps");
+    total_apps_verified += c5;
+    crate::serial_println!("[TEST_OK] TIER0_APPS_CAT_5");
+
+    let c6 = drivers::desktop::verify_category_apps(6);
+    assert_eq!(c6, 6, "Category 6 must verify all 6 media/audio/theme apps");
+    total_apps_verified += c6;
+    crate::serial_println!("[TEST_OK] TIER0_APPS_CAT_6");
+
+    let c7 = drivers::desktop::verify_category_apps(7);
+    assert_eq!(c7, 3, "Category 7 must verify all 3 games/accessibility/recovery apps");
+    total_apps_verified += c7;
+    crate::serial_println!("[TEST_OK] TIER0_APPS_CAT_7");
+
+    // Verify shell integration launches apps by CLI name across categories
+    let launch_calc = shell.execute("start calc");
+    assert!(launch_calc.contains("Aplicativo aberto"), "Terminal 'start calc' must open Calculator");
+    let launch_games = shell.execute("start minesweeper");
+    assert!(launch_games.contains("Aplicativo aberto"), "Terminal 'start minesweeper' must open Games Explorer");
+    let launch_themes = shell.execute("start themes");
+    assert!(launch_themes.contains("Aplicativo aberto"), "Terminal 'start themes' must open Personalization Studio");
+
+    // Reset focus cleanly to Terminal for interactive GUI session
+    let _ = drivers::desktop::open_app(drivers::desktop::AppId::Terminal);
+    drivers::desktop::redraw_full_desktop("", &shell.prompt());
+
+    assert_eq!(total_apps_verified, 50, "All 50 Tier-0 apps must pass render+click verification");
+    crate::serial_println!("[TEST_OK] ALL_50_TIER0_APPS_INTERACTIVE");
+    crate::serial_println!(">>> ALL HYBRIDOS AUTONOMOUS LOOP PHASES A, B, C & D (50 APPS) PASSED DETERMINISTICALLY! <<<\n");
 }
