@@ -1,0 +1,15 @@
+[package]
+name = "hyb-font-tune"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "hyb-font-tune"
+path = "src/main.rs"
+
+[dependencies]
+libhybrid_sys = { path = "../../libhybrid_sys" }
+
+
+
+
