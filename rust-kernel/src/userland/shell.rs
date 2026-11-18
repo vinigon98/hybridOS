@@ -78,11 +78,11 @@ impl fmt::Display for ShellError {
             Self::VfsError(err) => write!(f, "vfs error: {}", err),
             Self::BinaryExecutionError(err) => write!(f, "binary execution error: {}", err),
             Self::IoError(err) => write!(f, "i/o error: {}", err),
+            Self::DownloadError(err) => write!(f, "download error: {}", err),
         }
     }
-}
 
-impl std::error::Error for ShellError {}
+    impl std::error::Error for ShellError {}
 
 impl From<VfsError> for ShellError {
     fn from(err: VfsError) -> Self {
@@ -1392,7 +1392,7 @@ impl HybridShell {
     pub fn cmd_download(&mut self, url: &str, dest_path: &str) -> Result<String, ShellError> {
         use crate::net::smoltcp_bridge::perform_curl;
 
-        crate::serial_println!("[DOWNLOAD] Iniciando download de: {}", url);
+        crate::serial_println!("[DOWNLOAD] Downloading: {}", url);
         out.push_str(&format!("[DOWNLOAD] URL: {}\n", url));
         out.push_str(&format!("[DOWNLOAD] Destino: {}\n", dest_path));
 
@@ -1400,19 +1400,19 @@ impl HybridShell {
         let url_str = url.to_string();
         let (host, port, path) = parse_url(&url_str)?;
 
-        crate::serial_println!("[DOWNLOAD] Conectando a {}:{}...", host, port);
+        crate::serial_println!("[DOWNLOAD] Connecting to {}:{}...", host, port);
 
         // Baixa o conteúdo via HTTP GET
         let content = perform_curl(&host, port, &path)
-            .map_err(|e| ShellError::DownloadError(format!("Falha ao baixar: {}", e)))?;
+            .map_err(|e| ShellError::DownloadError(format!("Failed to download: {}", e)))?;
 
-        crate::serial_println!("[DOWNLOAD] Baixado {} bytes", content.len());
+        crate::serial_println!("[DOWNLOAD] Downloaded {} bytes", content.len());
 
         // Salva no VFS
         vfs::vfs_create_file(dest_path, content.as_bytes())
-            .map_err(|e| ShellError::DownloadError(format!("Falha ao salvar no VFS: {:?}", e)))?;
+            .map_err(|e| ShellError::DownloadError(format!("Failed to save to VFS: {:?}", e)))?;
 
-        crate::serial_println!("[DOWNLOAD] Salvo com sucesso em: {}", dest_path);
+        crate::serial_println!("[DOWNLOAD] Saved successfully em: {}", dest_path);
 
         let mut out = String::new();
         out.push_str("================================================================================\n");
@@ -2557,7 +2557,7 @@ mod tests {
 
         // 1. 'ver'
         let ver = shell.execute("ver");
-        assert!(ver.contains("Windows [Version 10.0.22631"));
+        assert!(ver.contains("Windows [Version 10.0.22631]"));
         assert!(ver.contains("Linux version 6.12.0"));
 
         // 2. 'whoami'
