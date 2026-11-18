@@ -33,7 +33,10 @@ use crate::drivers::ux_design_system::{
     ACCENT_PRIMARY, ACCENT_HOVER, ACCENT_PRESSED, BORDER_SUBTLE, BORDER_FOCUSED,
     ERROR_COLOR, SPACE_S, SPACE_M, BORDER_RADIUS_M, BTN_HEIGHT, ButtonState,
     Tooltip, Modal, ModalResult, FocusManager, HotkeyRegistry, HotkeyAction,
-    draw_focus_ring,
+    draw_focus_ring, HIGH_CONTRAST, set_high_contrast, is_high_contrast,
+    theme_bg, theme_text_primary, theme_accent, theme_border,
+    Animation, AnimType, SnapLayout, SnapZone, draw_keyboard_focus_ring,
+    screen_reader_announce, HC_ACCENT, HC_BG,
 };
 use crate::drivers::{
     apps_cat1_files,
@@ -287,6 +290,16 @@ pub struct DesktopState {
     pub alt_tab_idx: usize,
     /// Alt+Tab overlay visível
     pub alt_tab_visible: bool,
+    /// Tema de alto contraste ativo
+    pub high_contrast: bool,
+    /// Animação atual (fade/slide)
+    pub animation: Animation,
+    /// Layout de snap para arrastar janelas
+    pub snap_layout: SnapLayout,
+    /// Janela sendo arrastada para snap
+    pub snap_dragging: Option<usize>,
+    /// Leitor de tela habilitado
+    pub screen_reader: bool,
 }
 
 impl DesktopState {
@@ -442,6 +455,11 @@ pub fn init_desktop() {
         confirm_modal: Modal::new("", ""),
         alt_tab_idx: 0,
         alt_tab_visible: false,
+        high_contrast: false,
+        animation: Animation::new(),
+        snap_layout: SnapLayout::new(),
+        snap_dragging: None,
+        screen_reader: false,
     };
 
     // Inicializa o focus manager com a quantidade de janelas abertas
@@ -893,6 +911,67 @@ pub fn update_desktop_interactive(current_input: &str, prompt: &str) {
                     }
                     _ => {}
                 }
+
+                // Navegação por Tab (sem Alt) — move foco entre janelas
+                if let Some(sc) = take_last_scancode() {
+                    if sc == 0x0F && !desk.hotkey_registry.alt_pressed {
+                        // Tab pressionado sozinho
+                        let focused_windows: Vec<usize> = desk.windows.iter()
+                            .enumerate()
+                            .filter(|(_, w)| w.open && !w.minimized)
+                            .map(|(i, _)| i)
+                            .collect();
+                        if !focused_windows.is_empty() {
+                            desk.focus_mgr.next();
+                            let idx = desk.focus_mgr.focused_idx % focused_windows.len();
+                            if let Some(&win_idx) = focused_windows.get(idx) {
+                                let win_id = desk.windows[win_idx].id;
+                                desk.focused_app = win_id;
+                                if desk.screen_reader {
+                                    if let Some(meta) = ALL_APPS.iter().find(|m| m.id == win_id) {
+                                        screen_reader_announce(&format!("Foco em {}", meta.title));
+                                    }
+                                }
+                            }
+                        }
+                        trigger_full = true;
+                    }
+                    // Shift+Tab — foco anterior
+                    if sc == 0x0F && desk.hotkey_registry.shift_pressed {
+                        let focused_windows: Vec<usize> = desk.windows.iter()
+                            .enumerate()
+                            .filter(|(_, w)| w.open && !w.minimized)
+                            .map(|(i, _)| i)
+                            .collect();
+                        if !focused_windows.is_empty() {
+                            desk.focus_mgr.prev();
+                            let idx = desk.focus_mgr.focused_idx % focused_windows.len();
+                            if let Some(&win_idx) = focused_windows.get(idx) {
+                                let win_id = desk.windows[win_idx].id;
+                                desk.focused_app = win_id;
+                                if desk.screen_reader {
+                                    if let Some(meta) = ALL_APPS.iter().find(|m| m.id == win_id) {
+                                        screen_reader_announce(&format!("Foco anterior em {}", meta.title));
+                                    }
+                                }
+                            }
+                        }
+                        trigger_full = true;
+                    }
+                    // Alto Contraste (Left Alt + Left Shift + Print Screen)
+                    if desk.hotkey_registry.alt_pressed && desk.hotkey_registry.shift_pressed && sc == 0x37 {
+                        desk.high_contrast = !desk.high_contrast;
+                        set_high_contrast(desk.high_contrast);
+                        if desk.screen_reader {
+                            if desk.high_contrast {
+                                screen_reader_announce("Alto contraste ativado");
+                            } else {
+                                screen_reader_announce("Alto contraste desativado");
+                            }
+                        }
+                        trigger_full = true;
+                    }
+                }
             }
 
             if left_btn {
@@ -921,6 +1000,46 @@ pub fn update_desktop_interactive(current_input: &str, prompt: &str) {
                 }
             } else {
                 if desk.dragging_window.is_some() {
+                    // Snap Layout: detectar se a janela está na borda da tela ao soltar
+                    let (scr_w, scr_h) = {
+                        let con_lock = GOP_CONSOLE.lock();
+                        if let Some(ref c) = *con_lock {
+                            (c.width.max(640), c.height.max(480))
+                        } else {
+                            (1280usize, 800usize)
+                        }
+                    };
+                    if let Some(w_idx) = desk.dragging_window {
+                        if w_idx < desk.windows.len() {
+                            let zone = desk.snap_layout.detect_zone(mx, my, scr_w, scr_h);
+                            if zone != SnapZone::None {
+                                let (sx, sy, sw, sh) = desk.snap_layout.snap_rect(zone, scr_w, scr_h);
+                                // Ajustar para não cobrir a superbarra (40px na base)
+                                let sh_adj = if zone == SnapZone::FullScreen || zone == SnapZone::RightHalf || zone == SnapZone::LeftHalf {
+                                    sh.saturating_sub(64)
+                                } else {
+                                    sh
+                                };
+                                let sy_adj = if zone == SnapZone::FullScreen || zone == SnapZone::RightHalf || zone == SnapZone::LeftHalf {
+                                    0
+                                } else {
+                                    sy
+                                };
+                                let mut win = &mut desk.windows[w_idx];
+                                win.x = sx;
+                                win.y = sy_adj;
+                                win.w = sw;
+                                win.h = sh_adj;
+                                win.saved_x = sx;
+                                win.saved_y = sy_adj;
+                                win.saved_w = sw;
+                                win.saved_h = sh_adj;
+                                if desk.screen_reader {
+                                    screen_reader_announce("Janela ajustada com snap layout");
+                                }
+                            }
+                        }
+                    }
                     desk.dragging_window = None;
                     trigger_full = true;
                 }
@@ -1594,7 +1713,22 @@ pub fn redraw_full_desktop(current_input: &str, prompt: &str) {
             draw_text_clipped(fb, pitch, scr_w, scr_h, nao_x + 12, btn_y + 4, nao_x + BTN_HEIGHT + 16, "Não", TEXT_PRIMARY, None);
         }
 
-        // 11. Save background and draw smooth mouse cursor
+        // 11. Focus Ring — indica visual do widget com foco (navegação por teclado Tab)
+        if let Some(focused_win) = desk.windows.iter().find(|w| w.id == desk.focused_app && w.open && !w.minimized) {
+            let fx = focused_win.x;
+            let fy = focused_win.y;
+            let fw = focused_win.w;
+            let fh = focused_win.h;
+            draw_keyboard_focus_ring(fb, pitch, scr_w, scr_h, fx, fy, fw, fh);
+        }
+
+        // 12. Indicador de Alto Contraste (pequeno ícone no canto superior esquerdo quando ativo)
+        if desk.high_contrast {
+            fill_rounded_rect(fb, pitch, scr_w, scr_h, 16, 16, 20, 20, 4, HC_ACCENT);
+            draw_text_clipped(fb, pitch, scr_w, scr_h, 18, 20, 36, "HC", HC_BG, None);
+        }
+
+        // 13. Save background and draw smooth mouse cursor
         desk.needs_full_redraw = false;
         desk.cursor_saved_valid = false;
         save_and_draw_cursor(fb, pitch, scr_w, scr_h, desk, mx, my);

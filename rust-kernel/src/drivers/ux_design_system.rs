@@ -469,3 +469,207 @@ pub fn u32_to_str(n: u32, buf: &mut [u8]) -> &str {
     buf[len] = 0;
     core::str::from_utf8(&buf[..len]).unwrap_or("")
 }
+
+// ============================================================================
+// FASE 3 — Polimento e Acessibilidade
+// ============================================================================
+
+// --- Alto Contraste ---
+/// Cores de alto contraste (WCAG AAA: contraste ≥ 7:1)
+pub const HC_BG: u32 = 0x00000000;       // Preto puro
+pub const HC_FG: u32 = 0x00FFFFFF;       // Branco puro
+pub const HC_ACCENT: u32 = 0x00FFFF00;   // Amarelo brilhante
+pub const HC_BORDER: u32 = 0x0000FFFF;   // Ciano
+
+/// Indica se o tema de alto contraste está ativo
+pub static HIGH_CONTRAST: crate::sync::SpinLock<bool> = crate::sync::SpinLock::new(false);
+
+pub fn is_high_contrast() -> bool {
+    *HIGH_CONTRAST.lock()
+}
+
+pub fn set_high_contrast(enabled: bool) {
+    *HIGH_CONTRAST.lock() = enabled;
+}
+
+// --- Sistema de Animação ---
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum AnimType {
+    None,
+    FadeIn,
+    FadeOut,
+    SlideLeft,
+    SlideRight,
+}
+
+pub struct Animation {
+    pub anim_type: AnimType,
+    pub progress: u8, // 0..100
+    pub duration_ticks: u64,
+    pub start_tick: u64,
+}
+
+impl Animation {
+    pub const fn new() -> Self {
+        Self {
+            anim_type: AnimType::None,
+            progress: 0,
+            duration_ticks: 60, // ~0.6s a 100Hz
+            start_tick: 0,
+        }
+    }
+
+    pub fn start(&mut self, anim_type: AnimType, start_tick: u64) {
+        self.anim_type = anim_type;
+        self.progress = 0;
+        self.start_tick = start_tick;
+    }
+
+    pub fn update(&mut self, current_tick: u64) -> bool {
+        if self.anim_type == AnimType::None {
+            return false;
+        }
+        let elapsed = current_tick.saturating_sub(self.start_tick);
+        if elapsed >= self.duration_ticks {
+            self.progress = 100;
+            if self.anim_type == AnimType::FadeOut {
+                self.anim_type = AnimType::None;
+            }
+            return true; // animação concluída
+        }
+        self.progress = (((elapsed * 100) / self.duration_ticks) as u8).min(100);
+        false
+    }
+
+    pub fn alpha(&self) -> u32 {
+        // Retorna o nível de opacidade (0..255) baseado no progresso
+        match self.anim_type {
+            AnimType::FadeIn => self.progress as u32,
+            AnimType::FadeOut => 255 - (self.progress as u32),
+            _ => 255,
+        }
+    }
+}
+
+// --- Leitor de Tela Básico ---
+/// Anuncia texto para o leitor de tela (via serial COM1)
+pub fn screen_reader_announce(text: &str) {
+    crate::serial_println!("[Narrador] {}", text);
+}
+
+// --- Snap Layouts ---
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum SnapZone {
+    None,
+    LeftHalf,
+    RightHalf,
+    TopLeftQuarter,
+    TopRightQuarter,
+    BottomLeftQuarter,
+    BottomRightQuarter,
+    FullScreen,
+}
+
+pub struct SnapLayout {
+    pub zone: SnapZone,
+    pub snap_threshold: usize, // pixels da borda para ativar snap
+}
+
+impl SnapLayout {
+    pub const fn new() -> Self {
+        Self {
+            zone: SnapZone::None,
+            snap_threshold: 10,
+        }
+    }
+
+    /// Calcula a zona de snap baseada na posição do mouse/borda da janela
+    pub fn detect_zone(&self, mx: i32, my: i32, scr_w: usize, scr_h: usize) -> SnapZone {
+        let mx = mx.max(0);
+        let my = my.max(0);
+        let thr = self.snap_threshold as i32;
+        let w = scr_w as i32;
+        let h = scr_h as i32;
+
+        if mx <= thr && my <= thr {
+            return SnapZone::TopLeftQuarter;
+        }
+        if mx >= w - thr && my <= thr {
+            return SnapZone::TopRightQuarter;
+        }
+        if mx <= thr && my >= h - thr {
+            return SnapZone::BottomLeftQuarter;
+        }
+        if mx >= w - thr && my >= h - thr {
+            return SnapZone::BottomRightQuarter;
+        }
+        if mx <= thr {
+            return SnapZone::LeftHalf;
+        }
+        if mx >= w - thr {
+            return SnapZone::RightHalf;
+        }
+        SnapZone::None
+    }
+
+    /// Retorna o retângulo de destino para a zona de snap
+    pub fn snap_rect(&self, zone: SnapZone, scr_w: usize, scr_h: usize) -> (usize, usize, usize, usize) {
+        let half_w = scr_w / 2;
+        let half_h = scr_h / 2;
+        match zone {
+            SnapZone::LeftHalf => (0, 0, half_w, scr_h),
+            SnapZone::RightHalf => (half_w, 0, half_w, scr_h),
+            SnapZone::TopLeftQuarter => (0, 0, half_w, half_h),
+            SnapZone::TopRightQuarter => (half_w, 0, half_w, half_h),
+            SnapZone::BottomLeftQuarter => (0, half_h, half_w, half_h),
+            SnapZone::BottomRightQuarter => (half_w, half_h, half_w, half_h),
+            SnapZone::FullScreen => (0, 0, scr_w, scr_h),
+            SnapZone::None => (0, 0, scr_w, scr_h),
+        }
+    }
+}
+
+// --- Focus Ring com indicação visual para navegação por teclado ---
+pub fn draw_keyboard_focus_ring(
+    fb: *mut u8,
+    pitch: usize,
+    scr_w: usize,
+    scr_h: usize,
+    x: usize,
+    y: usize,
+    w: usize,
+    h: usize,
+) {
+    use crate::drivers::gfx2d::{draw_rounded_rect_border, fill_rounded_rect};
+    unsafe {
+        // Anel externo branco (foco ativo)
+        let pad = 3;
+        let rx = x.saturating_sub(pad);
+        let ry = y.saturating_sub(pad);
+        let rw = w.saturating_add(pad * 2);
+        let rh = h.saturating_add(pad * 2);
+        let _ = fill_rounded_rect(fb, pitch, scr_w, scr_h, rx, ry, rw, rh, BORDER_RADIUS_M, OVERLAY_DARK);
+        let color = if is_high_contrast() { HC_BORDER } else { BORDER_FOCUSED };
+        let _ = draw_rounded_rect_border(fb, pitch, scr_w, scr_h, rx, ry, rw, rh, BORDER_RADIUS_M, color);
+    }
+}
+
+/// Retorna a cor de fundo apropriada baseada no modo de alto contraste
+pub fn theme_bg() -> u32 {
+    if is_high_contrast() { HC_BG } else { BG_SURFACE }
+}
+
+/// Retorna a cor de texto apropriada baseada no modo de alto contraste
+pub fn theme_text_primary() -> u32 {
+    if is_high_contrast() { HC_FG } else { TEXT_PRIMARY }
+}
+
+/// Retorna a cor de destaque apropriada baseada no modo de alto contraste
+pub fn theme_accent() -> u32 {
+    if is_high_contrast() { HC_ACCENT } else { ACCENT_PRIMARY }
+}
+
+/// Retorna a cor de borda apropriada baseada no modo de alto contraste
+pub fn theme_border() -> u32 {
+    if is_high_contrast() { HC_BORDER } else { BORDER_SUBTLE }
+}
