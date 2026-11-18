@@ -1,0 +1,11 @@
+[package]
+name = "hyb-image"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "hyb-image"
+path = "src/main.rs"
+
+[dependencies]
+libhybrid_sys = { path = "../../libhybrid_sys" }

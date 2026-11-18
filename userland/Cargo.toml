@@ -22,6 +22,7 @@ members = [
     "apps/hyb-focus",
     "apps/hyb-pdf",
     "apps/hyb-zoom",
+<<<<<<< HEAD
     # Binarios 39-60 — Agente 3
     "apps/hyb-top",
     "apps/hyb-resmon",
