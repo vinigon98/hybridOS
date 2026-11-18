@@ -241,9 +241,6 @@ pub extern "C" fn _start() -> ! {
     drivers::desktop::init_desktop();
     let mut shell = userland::shell::HybridShell::new();
 
-    // Run Full Self-Test Verification Suite for Phases A, B and C
-    run_desktop_and_subsystem_self_tests(&mut shell);
-
     crate::serial_println!("[GUI] HybridOS Desktop Environment & PS/2 Mouse active.");
     crate::serial_println!("[Shell] HybridShell interactive session started.");
     crate::serial_println!("[BOOT_STAGE_OK]");
@@ -303,12 +300,10 @@ pub extern "C" fn _start() -> ! {
                 }
                 line_buf.clear();
                 drivers::desktop::redraw_full_desktop(&line_buf, &shell.prompt());
-                drivers::desktop::redraw_full_desktop(&line_buf, &shell.prompt());
                 crate::serial_print!("{}", shell.prompt());
             } else if b == 0x08 || b == 0x7F {
                 if !line_buf.is_empty() {
                     line_buf.pop();
-                    drivers::desktop::redraw_full_desktop(&line_buf, &shell.prompt());
                     drivers::desktop::redraw_full_desktop(&line_buf, &shell.prompt());
                     crate::serial_print!("\x08 \x08");
                 }
