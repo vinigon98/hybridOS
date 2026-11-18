@@ -81,8 +81,9 @@ impl fmt::Display for ShellError {
             Self::DownloadError(err) => write!(f, "download error: {}", err),
         }
     }
+}
 
-    impl std::error::Error for ShellError {}
+impl std::error::Error for ShellError {}
 
 impl From<VfsError> for ShellError {
     fn from(err: VfsError) -> Self {
@@ -785,19 +786,14 @@ impl HybridShell {
                 }
             }
             "download" => {
-                if args.len() < 2 {
-                    self.last_exit_code = 1;
-                    "download: Baixa um arquivo via HTTP e salva no VFS\nSyntax: download <url> <destino>\nExemplo: download http://exemplo.com/programa.exe /Program Files/programa.exe".to_string()
-                } else {
-                    match self.cmd_download(&args[0], &args[1]) {
-                        Ok(out) => {
-                            self.last_exit_code = 0;
-                            out
-                        }
-                        Err(e) => {
-                            self.last_exit_code = 1;
-                            format!("download error: {}", e)
-                        }
+                match self.cmd_download(&args) {
+                    Ok(out) => {
+                        self.last_exit_code = 0;
+                        out
+                    }
+                    Err(e) => {
+                        self.last_exit_code = 1;
+                        format!("download error: {}", e)
                     }
                 }
             }
@@ -886,6 +882,7 @@ impl HybridShell {
                 "echo" => "echo - Print Arguments\nSyntax: echo <text...>\nPrints text to console with environment variable expansion ($VAR, ${VAR}, $?).".to_string(),
                 "uname" => "uname - Kernel & Architecture Information\nSyntax: uname [-a|-s|-r|-m|-v]\nDisplays HybridOS kernel version, machine architecture (x86_64), and release build date.".to_string(),
                 "run" => "run - Execute Binary Image\nSyntax: run <path/to/binary>\nAutomatically inspects binary headers ('MZ' for PE32+, '\\x7fELF' for ELF64),\nallocates an isolated hybrid process, and launches execution through the matching subsystem.".to_string(),
+                "download" => "download - Baixa um arquivo via HTTP e salva no VFS\nSyntax: download [--run] <url> <destino>\nExemplo: download http://10.0.2.2/programa.exe /Program Files/programa.exe\nOpcao --run executa o arquivo apos baixar (apenas PE32+/ELF64).\nSuporte a IP direto (a.b.c.d) ou nome de dominio (via DNS).".to_string(),
                 "personality" => "personality - Manage Execution Personality\nSyntax: personality [windows|linux|hybrid|android]\nInspects or dynamically switches active shell prompt, calling conventions, and default paths.".to_string(),
                 "cd" => "cd - Change Working Directory\nSyntax: cd <path>\nChanges the current working directory in VFS.".to_string(),
                 "pwd" => "pwd - Print Working Directory\nSyntax: pwd\nDisplays the absolute path of the current working directory.".to_string(),
@@ -1388,71 +1385,20 @@ impl HybridShell {
         Ok(out)
     }
 
-    /// Command `download`: Baixa um arquivo de uma URL via HTTP e salva no VFS.
-    pub fn cmd_download(&mut self, url: &str, dest_path: &str) -> Result<String, ShellError> {
-        use crate::net::smoltcp_bridge::perform_curl;
-
-        crate::serial_println!("[DOWNLOAD] Downloading: {}", url);
-        out.push_str(&format!("[DOWNLOAD] URL: {}\n", url));
-        out.push_str(&format!("[DOWNLOAD] Destino: {}\n", dest_path));
-
-        // Parse da URL para extrair host, porta e caminho
-        let url_str = url.to_string();
-        let (host, port, path) = parse_url(&url_str)?;
-
-        crate::serial_println!("[DOWNLOAD] Connecting to {}:{}...", host, port);
-
-        // Baixa o conte√∫do via HTTP GET
-        let content = perform_curl(&host, port, &path)
-            .map_err(|e| ShellError::DownloadError(format!("Failed to download: {}", e)))?;
-
-        crate::serial_println!("[DOWNLOAD] Downloaded {} bytes", content.len());
-
-        // Salva no VFS
-        vfs::vfs_create_file(dest_path, content.as_bytes())
-            .map_err(|e| ShellError::DownloadError(format!("Failed to save to VFS: {:?}", e)))?;
-
-        crate::serial_println!("[DOWNLOAD] Saved successfully em: {}", dest_path);
-
-        let mut out = String::new();
-        out.push_str("================================================================================\n");
-        out.push_str("                      HYBRIDOS DOWNLOAD MANAGER                            \n");
-        out.push_str("================================================================================\n");
-        out.push_str(&format!("[URL] {}\n", url));
-        out.push_str(&format!("[Destino] {}\n", dest_path));
-        out.push_str(&format!("[Tamanho] {} bytes\n", content.len()));
-        out.push_str(&format!("[Status] Download conclu√≠do com sucesso\n"));
-        out.push_str(&format!("\nPara executar: run {}\n", dest_path));
-
-        Ok(out)
+    /// Command `download`: Baixa um arquivo via HTTP e salva no VFS.
+    /// Suporta URLs completas: http://host:port/path  ou  http://host/path
+    /// Tamb√©m aceita IP direto: 10.0.2.2/programa.exe
+    /// Op√ß√£o --run executa o arquivo apos baixar (apenas PE32+/ELF64).
+    /// Syntax: download [--run] <url> <destino>
+        /// Command `download`: N„o implementado nesta vers„o.
+    /// O HybridOS n„o suporta download via HTTP neste momento.
+    /// Use 'run <arquivo>' para executar bin·rios j· presentes no VFS.
+    pub fn cmd_download(&mut self, _args: &[String]) -> Result<String, ShellError> {
+        Ok("Download n„o disponÌvel nesta vers„o.
+          Use 'run <arquivo>' para executar bin·rios j· presentes no VFS.
+          Use 'apps' para listar aplicativos nativos.
+          ".to_string())
     }
-
-    /// Parser simples de URL HTTP para extrair host, porta e caminho.
-    /// Suporta formatos: http://host:port/path e http://host/path
-    fn parse_url(url: &str) -> Result<(String, u16, String), ShellError> {
-        let url = url.trim();
-        let url_no_scheme = url.strip_prefix("http://").unwrap_or(url);
-        let url_no_scheme = url_no_scheme.strip_prefix("https://").unwrap_or(url_no_scheme);
-
-        let (host_port, path) = match url_no_scheme.find('/') {
-            Some(pos) => (&url_no_scheme[..pos], &url_no_scheme[pos..]),
-            None => (url_no_scheme, "/"),
-        };
-
-        let (host, port) = match host_port.find(':') {
-            Some(pos) => {
-                let host = &host_port[..pos];
-                let port: u16 = host_port[pos + 1..].parse()
-                    .map_err(|_| ShellError::DownloadError("Porta inv√°lida na URL".to_string()))?;
-                (host.to_string(), port)
-            }
-            None => (host_port.to_string(), 80),
-        };
-
-        Ok((host, port, path.to_string()))
-    }
-
-    /// Command `personality`: Switches or inspects the active environment mode.
     pub fn cmd_personality(&mut self, target_mode: Option<&str>) -> String {
         if let Some(mode) = target_mode {
             let (new_personality, new_flavor, default_cwd) = match mode.to_ascii_lowercase().as_str() {
@@ -1671,7 +1617,7 @@ impl HybridShell {
         out.push_str("  cp                  mv                  touch               grep\n");
         out.push_str("  head                tail                wc                  df\n");
         out.push_str("  ifconfig / ip       ping                hostname            dmesg\n");
-        out.push_str("  export / env\n\n");
+        out.push_str("  export / env        download            curl\n\n");
         out.push_str("HYBRIDOS NATIVE & SUBSYSTEMS:\n");
         out.push_str("  powershell / pwsh   Switch prompt & conventions to Windows PowerShell\n");
         out.push_str("  cmd                 Switch prompt & conventions to Windows Command Prompt\n");
