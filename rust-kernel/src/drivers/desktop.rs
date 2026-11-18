@@ -19,6 +19,7 @@ use alloc::vec;
 use crate::sync::SpinLock;
 use crate::drivers::gop::{GOP_CONSOLE, FONT_8X16};
 use crate::drivers::mouse::MOUSE_STATE;
+use crate::drivers::{take_last_scancode, is_alt_pressed, is_ctrl_pressed, is_win_pressed};
 use crate::drivers::gfx2d::{
     fill_rounded_rect, fill_rounded_rect_gradient, draw_rounded_rect_border,
     draw_soft_drop_shadow, draw_bmp,
@@ -26,6 +27,13 @@ use crate::drivers::gfx2d::{
     draw_crystal_sphere_emblem, draw_vitrified_superbar,
     draw_asymmetric_start_menu,
     ICON_TERMINAL_BMP, ICON_FOLDER_BMP, ICON_CPU_BMP, ICON_INFO_BMP,
+};
+use crate::drivers::ux_design_system::{
+    BG_WINDOW_ACTIVE, BG_SURFACE, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
+    ACCENT_PRIMARY, ACCENT_HOVER, ACCENT_PRESSED, BORDER_SUBTLE, BORDER_FOCUSED,
+    ERROR_COLOR, SPACE_S, SPACE_M, BORDER_RADIUS_M, BTN_HEIGHT, ButtonState,
+    Tooltip, Modal, ModalResult, FocusManager, HotkeyRegistry, HotkeyAction,
+    draw_focus_ring,
 };
 use crate::drivers::{
     apps_cat1_files,
@@ -267,6 +275,18 @@ pub struct DesktopState {
     pub calc_acc: f64,
     pub calc_op: Option<char>,
     pub active_tab: usize,
+    /// Sistema de foco por teclado (navegação Tab)
+    pub focus_mgr: FocusManager,
+    /// Registry de atalhos de teclado
+    pub hotkey_registry: HotkeyRegistry,
+    /// Tooltip flutuante para botões ícones
+    pub tooltip: Tooltip,
+    /// Modal de confirmação (ex: desligar)
+    pub confirm_modal: Modal,
+    /// Índice da janela focada para Alt+Tab
+    pub alt_tab_idx: usize,
+    /// Alt+Tab overlay visível
+    pub alt_tab_visible: bool,
 }
 
 impl DesktopState {
@@ -416,7 +436,20 @@ pub fn init_desktop() {
         calc_acc: 0.0,
         calc_op: None,
         active_tab: 0,
+        focus_mgr: FocusManager::new(0),
+        hotkey_registry: HotkeyRegistry::new(),
+        tooltip: Tooltip::new("", 0, 0),
+        confirm_modal: Modal::new("", ""),
+        alt_tab_idx: 0,
+        alt_tab_visible: false,
     };
+
+    // Inicializa o focus manager com a quantidade de janelas abertas
+    let mut desk_lock = DESKTOP.lock();
+    if let Some(ref mut desk) = *desk_lock {
+        desk.focus_mgr = FocusManager::new(desk.windows.len());
+    }
+    drop(desk_lock);
 
     *DESKTOP.lock() = Some(state);
     refresh_vfs_cache();
@@ -797,6 +830,71 @@ pub fn update_desktop_interactive(current_input: &str, prompt: &str) {
                 return;
             }
 
+            // ---------------- HOTKEYS DE TECLADO ----------------
+            if let Some(sc) = take_last_scancode() {
+                let action = desk.hotkey_registry.check_hotkey(sc);
+                match action {
+                    HotkeyAction::AltTab => {
+                        // Alternar entre janelas abertas (não minimizadas)
+                        let open_indices: Vec<usize> = desk.windows.iter()
+                            .enumerate()
+                            .filter(|(_, w)| w.open && !w.minimized)
+                            .map(|(i, _)| i)
+                            .collect();
+                        if !open_indices.is_empty() {
+                            desk.alt_tab_idx = (desk.alt_tab_idx + 1) % open_indices.len();
+                            let target_idx = open_indices[desk.alt_tab_idx];
+                            let target_id = desk.windows[target_idx].id;
+                            desk.focused_app = target_id;
+                            for w in desk.windows.iter_mut() {
+                                w.minimized = false;
+                                w.open = true;
+                            }
+                            desk.windows[target_idx].minimized = false;
+                            desk.alt_tab_visible = true;
+                        }
+                        trigger_full = true;
+                    }
+                    HotkeyAction::WinD => {
+                        // Mostrar/ocultar área de trabalho (minimizar todas)
+                        let all_minimized = desk.windows.iter().all(|w| !w.open || w.minimized);
+                        for w in desk.windows.iter_mut() {
+                            if w.open {
+                                w.minimized = all_minimized;
+                            }
+                        }
+                        desk.start_menu_open = false;
+                        trigger_full = true;
+                    }
+                    HotkeyAction::WinS => {
+                        // Abrir busca global (Start Menu com foco na busca)
+                        desk.start_menu_open = true;
+                        desk.start_menu_cat = 0;
+                        desk.search_query.clear();
+                        trigger_full = true;
+                    }
+                    HotkeyAction::Escape => {
+                        if desk.start_menu_open {
+                            desk.start_menu_open = false;
+                            desk.search_query.clear();
+                        } else if desk.confirm_modal.visible {
+                            desk.confirm_modal.hide();
+                        } else if desk.alt_tab_visible {
+                            desk.alt_tab_visible = false;
+                        }
+                        trigger_full = true;
+                    }
+                    HotkeyAction::AltF4 => {
+                        // Fechar janela focada
+                        if let Some(fi) = desk.windows.iter().position(|w| w.id == desk.focused_app && w.open && !w.minimized) {
+                            desk.windows[fi].open = false;
+                        }
+                        trigger_full = true;
+                    }
+                    _ => {}
+                }
+            }
+
             if left_btn {
                 if let Some(w_idx) = desk.dragging_window {
                     if w_idx < desk.windows.len() && desk.windows[w_idx].open && !desk.windows[w_idx].minimized {
@@ -905,6 +1003,35 @@ fn handle_desktop_click(cx: usize, cy: usize) {
         None => return,
     };
 
+    // 0. Modal de confirmação (ex: desligar) — intercepta cliques antes de tudo
+    if desk.confirm_modal.visible {
+        let mw = 320;
+        let mh = 140;
+        let mx_modal = (scr_w / 2).saturating_sub(mw / 2);
+        let my_modal = (scr_h / 2).saturating_sub(mh / 2);
+        let btn_y = my_modal + mh - SPACE_M - BTN_HEIGHT;
+        let sim_x = mx_modal + SPACE_M;
+        let nao_x = mx_modal + mw - SPACE_M - BTN_HEIGHT;
+        let btn_w2 = BTN_HEIGHT + 16;
+        if cy >= btn_y && cy <= btn_y + BTN_HEIGHT {
+            if cx >= sim_x && cx <= sim_x + btn_w2 {
+                // Sim → executar desligamento
+                unsafe {
+                    crate::arch::msr::outb(0xf4, 0x00);
+                    crate::arch::acpi::acpi_shutdown();
+                }
+            }
+            if cx >= nao_x && cx <= nao_x + btn_w2 {
+                // Não → fechar modal
+                desk.confirm_modal.hide();
+                return;
+            }
+        }
+        // Clique fora do modal fecha o modal
+        desk.confirm_modal.hide();
+        return;
+    }
+
     // 1. Crystal Sphere Emblem click (Start Menu Toggle)
     let emblem_dx = (cx as isize) - 28;
     let emblem_dy = (cy as isize) - ((scr_h - 22) as isize);
@@ -925,14 +1052,15 @@ fn handle_desktop_click(cx: usize, cy: usize) {
     // 3. Start Menu interaction (if open)
     let sm_y = scr_h - 540;
     if desk.start_menu_open && cx >= 8 && cx <= 428 && cy >= sm_y && cy <= scr_h - 40 {
-        // 3a. Power button [ Desligar | ▸ ] in right column
+        // 3a. Power button [ Desligar | ▸ ] in right column — abre modal de confirmação
         let btn_x = 8 + 250 + 12;
         let btn_y = sm_y + 500 - 42;
         if cx >= btn_x && cx <= btn_x + 146 && cy >= btn_y && cy <= btn_y + 30 {
-            unsafe {
-                crate::arch::msr::outb(0xf4, 0x00);
-                crate::arch::acpi::acpi_shutdown();
-            }
+            desk.confirm_modal.title = String::from("Desligar o HybridOS?");
+            desk.confirm_modal.message = String::from("Tem certeza que deseja desligar o computador?");
+            desk.confirm_modal.show();
+            desk.confirm_modal.focus_yes = true;
+            return;
         }
 
         // 3b. Right column system shortcuts (every single shortcut opens its real native app)
@@ -1077,17 +1205,19 @@ fn handle_desktop_click(cx: usize, cy: usize) {
         if cx >= w_x && cx < w_x + w_w && cy >= w_y && cy < w_y + w_h {
             desk.focused_app = w_id;
 
-            // Check Vitrified Control Capsule (top-right: w_x + w_w - 92 .. w_x + w_w - 8)
-            let cap_x = w_x + w_w - 92;
-            let cap_y = w_y + 5;
-            if cy >= cap_y && cy <= cap_y + 22 {
+            // Check Padronized Control Capsule (top-right: w_x + w_w - 108 .. w_x + w_w - 12)
+            // 3 botões de 32px com 4px de espaçamento
+            let btn_w = 32;
+            let cap_x = w_x + w_w - (btn_w * 3 + 12);
+            let cap_y = w_y + 6;
+            if cy >= cap_y && cy <= cap_y + 26 {
                 // Minimize [-]
-                if cx >= cap_x && cx < cap_x + 28 {
+                if cx >= cap_x && cx < cap_x + btn_w {
                     desk.windows[i].minimized = true;
                     return;
                 }
                 // Maximize/Restore [□]
-                if cx >= cap_x + 28 && cx < cap_x + 56 {
+                if cx >= cap_x + btn_w + 4 && cx < cap_x + (btn_w + 4) * 2 {
                     let win = &mut desk.windows[i];
                     if win.maximized {
                         win.x = win.saved_x;
@@ -1108,8 +1238,8 @@ fn handle_desktop_click(cx: usize, cy: usize) {
                     }
                     return;
                 }
-                // Close [X]
-                if cx >= cap_x + 56 && cx <= cap_x + 84 {
+                // Close [×]
+                if cx >= cap_x + (btn_w + 4) * 2 && cx <= cap_x + (btn_w + 4) * 2 + btn_w {
                     desk.windows[i].open = false;
                     return;
                 }
@@ -1429,7 +1559,42 @@ pub fn redraw_full_desktop(current_input: &str, prompt: &str) {
             draw_text_px(fb, pitch, scr_w, scr_h, 8 + 250 + 28, sm_y + 500 - 34, "Desligar", 0x00FFFFFF, None);
         }
 
-        // 9. Save background and draw smooth mouse cursor
+        // 9. Tooltip flutuante (botões ícones, controles)
+        if desk.tooltip.visible && !desk.tooltip.text.is_empty() {
+            let tx = desk.tooltip.x.max(0) as usize;
+            let ty = desk.tooltip.y.max(0) as usize;
+            let tw = (desk.tooltip.text.len() * 8 + SPACE_M).min(scr_w.saturating_sub(SPACE_S));
+            let th = BTN_HEIGHT;
+            let tooltip_x = tx.saturating_sub(tw / 2);
+            let tooltip_y = ty.saturating_sub(th + SPACE_S);
+            fill_rounded_rect(fb, pitch, scr_w, scr_h, tooltip_x, tooltip_y, tw, th, BORDER_RADIUS_M, BG_SURFACE);
+            draw_rounded_rect_border(fb, pitch, scr_w, scr_h, tooltip_x, tooltip_y, tw, th, BORDER_RADIUS_M, BORDER_FOCUSED);
+            draw_text_clipped(fb, pitch, scr_w, scr_h, tooltip_x + SPACE_S, tooltip_y + 4, tooltip_x + tw - SPACE_S, &desk.tooltip.text, TEXT_PRIMARY, None);
+        }
+
+        // 10. Modal de confirmação (ex: desligar)
+        if desk.confirm_modal.visible {
+            let mw = 320;
+            let mh = 140;
+            let mx_modal = (scr_w / 2).saturating_sub(mw / 2);
+            let my_modal = (scr_h / 2).saturating_sub(mh / 2);
+            fill_rounded_rect(fb, pitch, scr_w, scr_h, mx_modal, my_modal, mw, mh, BORDER_RADIUS_M, BG_SURFACE);
+            draw_rounded_rect_border(fb, pitch, scr_w, scr_h, mx_modal, my_modal, mw, mh, BORDER_RADIUS_M, BORDER_FOCUSED);
+            draw_text_clipped(fb, pitch, scr_w, scr_h, mx_modal + SPACE_M, my_modal + SPACE_S, mx_modal + mw - SPACE_M, &desk.confirm_modal.title, TEXT_PRIMARY, None);
+            draw_text_clipped(fb, pitch, scr_w, scr_h, mx_modal + SPACE_M, my_modal + SPACE_M + 20, mx_modal + mw - SPACE_M, &desk.confirm_modal.message, TEXT_SECONDARY, None);
+            // Botões Sim/Não
+            let btn_y = my_modal + mh - SPACE_M - BTN_HEIGHT;
+            let sim_x = mx_modal + SPACE_M;
+            let nao_x = mx_modal + mw - SPACE_M - BTN_HEIGHT;
+            let sim_hover = desk.confirm_modal.focus_yes;
+            let nao_hover = !desk.confirm_modal.focus_yes;
+            fill_rounded_rect(fb, pitch, scr_w, scr_h, sim_x, btn_y, BTN_HEIGHT + 16, BTN_HEIGHT, BORDER_RADIUS_M, if sim_hover { ACCENT_PRIMARY } else { BORDER_SUBTLE });
+            draw_text_clipped(fb, pitch, scr_w, scr_h, sim_x + 12, btn_y + 4, sim_x + BTN_HEIGHT + 16, "Sim", TEXT_PRIMARY, None);
+            fill_rounded_rect(fb, pitch, scr_w, scr_h, nao_x, btn_y, BTN_HEIGHT + 16, BTN_HEIGHT, BORDER_RADIUS_M, if nao_hover { ACCENT_PRIMARY } else { BORDER_SUBTLE });
+            draw_text_clipped(fb, pitch, scr_w, scr_h, nao_x + 12, btn_y + 4, nao_x + BTN_HEIGHT + 16, "Não", TEXT_PRIMARY, None);
+        }
+
+        // 11. Save background and draw smooth mouse cursor
         desk.needs_full_redraw = false;
         desk.cursor_saved_valid = false;
         save_and_draw_cursor(fb, pitch, scr_w, scr_h, desk, mx, my);
@@ -1459,17 +1624,56 @@ unsafe fn draw_single_crystal_window(
     let title_color = if is_focused { 0x00FFFFFF } else { 0x00CBD5E1 };
     draw_text_clipped(fb, pitch, scr_w, scr_h, w_x + 14, w_y + 8, w_x + w_w - 100, w_title, title_color, None);
 
-    // 3. Vitrified 3-Button Control Capsule (Minimize, Maximize, Ruby-Red Close)
+    // 3. Padronized 3-Button Control Capsule (Minimize, Maximize, Close)
+    //    [-]  [□]  [×]  — tooltips ao hover, fechar em destaque vermelho
     let (mx, my) = {
         let m = MOUSE_STATE.lock();
         (m.x.max(0) as usize, m.y.max(0) as usize)
     };
-    let cap_x = w_x + w_w - 92;
-    let cap_y = w_y + 5;
-    let hov_min = my >= cap_y && my <= cap_y + 22 && mx >= cap_x && mx < cap_x + 28;
-    let hov_max = my >= cap_y && my <= cap_y + 22 && mx >= cap_x + 28 && mx < cap_x + 56;
-    let hov_cls = my >= cap_y && my <= cap_y + 22 && mx >= cap_x + 56 && mx <= cap_x + 84;
-    draw_glass_control_capsule(fb, pitch, scr_w, scr_h, cap_x, cap_y, hov_cls, hov_max, hov_min);
+    let btn_w = 32;
+    let btn_h = 26;
+    let cap_x = w_x + w_w - (btn_w * 3 + 12);
+    let cap_y = w_y + 6;
+
+    let min_x = cap_x;
+    let max_x = cap_x + btn_w + 4;
+    let cls_x = cap_x + (btn_w + 4) * 2;
+
+    let hov_min = my >= cap_y && my <= cap_y + btn_h && mx >= min_x && mx < min_x + btn_w;
+    let hov_max = my >= cap_y && my <= cap_y + btn_h && mx >= max_x && mx < max_x + btn_w;
+    let hov_cls = my >= cap_y && my <= cap_y + btn_h && mx >= cls_x && mx <= cls_x + btn_w;
+
+    // Desenha os 3 botões com estados visuais
+    let btn_states = [
+        (min_x, "Minimizar", hov_min, ButtonState::Hover),
+        (max_x, "Maximizar", hov_max, ButtonState::Hover),
+        (cls_x, "Fechar", hov_cls, ButtonState::Hover),
+    ];
+
+    for (bx, label, hovered, _) in btn_states.iter() {
+        let is_close = *label == "Fechar";
+        let state = if *hovered {
+            ButtonState::Hover
+        } else {
+            ButtonState::Normal
+        };
+        let bg = if is_close && *hovered { ERROR_COLOR } else { state.bg_color() };
+        fill_rounded_rect(fb, pitch, scr_w, scr_h, *bx, cap_y, btn_w, btn_h, BORDER_RADIUS_M, bg);
+        draw_rounded_rect_border(fb, pitch, scr_w, scr_h, *bx, cap_y, btn_w, btn_h, BORDER_RADIUS_M, BORDER_SUBTLE);
+
+        let glyph = if *label == "Minimizar" { "–" } else if *label == "Maximizar" { "□" } else { "×" };
+        let glyph_color = if is_close && *hovered { TEXT_PRIMARY } else { state.text_color() };
+        let glyph_x = bx + (btn_w.saturating_sub(8)) / 2;
+        draw_text_clipped(fb, pitch, scr_w, scr_h, glyph_x, cap_y + 4, bx + btn_w, glyph, glyph_color, None);
+
+        // Tooltip ao hover
+        if *hovered {
+            desk.tooltip.text = String::from(*label);
+            desk.tooltip.x = *bx as i32;
+            desk.tooltip.y = (cap_y as i32) - 24;
+            desk.tooltip.visible = true;
+        }
+    }
 
     // 4. Window Client Canvas Area
     let canvas_x = w_x + 4;

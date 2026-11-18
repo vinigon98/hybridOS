@@ -1,0 +1,11 @@
+[package]
+name = "user32"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "user32"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+libhybrid_sys = { path = "../../libhybrid_sys" }

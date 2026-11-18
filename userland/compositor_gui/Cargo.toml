@@ -1,0 +1,11 @@
+[package]
+name = "compositor_gui"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "hybrid_desktop"
+path = "src/main.rs"
+
+[dependencies]
+libhybrid_sys = { path = "../libhybrid_sys" }
