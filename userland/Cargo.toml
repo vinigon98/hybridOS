@@ -1,14 +1,8 @@
 [workspace]
 members = [
     "libhybrid_sys",
-    "nt_dlls",
-    "nt_dlls/ntdll",
-    "nt_dlls/kernel32",
-    "nt_dlls/user32",
-    "nt_dlls/gdi32",
-    "compositor_gui",
     "apps/hybrid_sh",
-    # Binarios 16-38 — Agente 2 (hyb-sh = hybrid_sh; hybctl = Agente 8)
+    # Binarios 16-38 — Agente 2
     "apps/hyb-term",
     "apps/hyb-script-studio",
     "apps/cmd-compat",
@@ -30,22 +24,5 @@ members = [
     "apps/hyb-cronctl",
     "apps/hyb-runner",
     "apps/hyb-pipe",
-    "apps/win_sysbench",
-    "apps/hybrid_3d_demo",
-    "apps/hyb-files",
-    "apps/hyb-edit",
-    "apps/hyb-calc",
-    "apps/hyb-capture",
-    "apps/hyb-clip",
-    "apps/hyb-chars",
-    "apps/hyb-fonts",
-    "apps/hyb-paint",
-    "apps/hyb-rdp",
-    "apps/hyb-vault",
-    "apps/hyb-cert-user",
-    "apps/hyb-cert-sys",
-    "apps/hyb-focus",
-    "apps/hyb-pdf",
-    "apps/hyb-zoom",
 ]
 resolver = "2"

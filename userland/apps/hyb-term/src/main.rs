@@ -1,25 +1,11 @@
-#![no_std]
-#![no_main]
-
+#![no_std] #![no_main]
 use libhybrid_sys::linux::{sys_read, sys_write, sys_exit, STDIN_FILENO, STDOUT_FILENO};
-
-fn put(s: &str) {
-    let _ = sys_write(STDOUT_FILENO, s.as_bytes());
-}
-fn putln(s: &str) {
-    put(s);
-    put("\r\n");
-}
-
+fn put(s: &str) { let _ = sys_write(STDOUT_FILENO, s.as_bytes()); }
+fn putln(s: &str) { put(s); put("\r\n"); }
 static BANNER: &str = "\r\nHybridOS hyb-term v0.1 - Emulador de Terminal Acelerado por GPU\r\nComandos: help, clear, exit\r\n";
 static PROMPT: &str = "hyb-term> ";
 static HELP: &str = "help  - esta ajuda\nclear - limpar a tela\nexit  - encerra o terminal\n";
-
-fn read_line(buf: &mut [u8]) -> usize {
-    let r = sys_read(STDIN_FILENO, buf);
-    if r < 0 { 0 } else { r as usize }
-}
-
+fn read_line(buf: &mut [u8]) -> usize { let r = sys_read(STDIN_FILENO, buf); if r < 0 { 0 } else { r as usize } }
 fn run() {
     put(BANNER);
     let mut buf = [0u8; 256];
@@ -39,9 +25,4 @@ fn run() {
         }
     }
 }
-
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    run();
-    sys_exit(0);
-}
+#[no_mangle] pub extern "C" fn _start() -> ! { run(); sys_exit(0); }

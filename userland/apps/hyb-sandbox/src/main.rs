@@ -1,38 +1,12 @@
-#![no_std]
-#![no_main]
-
+#![no_std] #![no_main]
 use libhybrid_sys::linux::{sys_read, sys_write, sys_exit, sys_getpid, sys_sched_yield, STDIN_FILENO, STDOUT_FILENO};
-
-fn put(s: &str) {
-    let _ = sys_write(STDOUT_FILENO, s.as_bytes());
-}
-fn putln(s: &str) {
-    put(s);
-    put("\r\n");
-}
-fn put_u64(v: u64) {
-    if v == 0 { put("0"); return; }
-    let mut tmp = [0u8; 20];
-    let mut n = v;
-    let mut pos = 0;
-    while n > 0 { tmp[pos] = b'0' + (n % 10) as u8; n /= 10; pos += 1; }
-    while pos > 0 { pos -= 1; put(core::str::from_utf8(&[tmp[pos]]).unwrap_or("")); }
-}
-
+fn put(s: &str) { let _ = sys_write(STDOUT_FILENO, s.as_bytes()); }
+fn putln(s: &str) { put(s); put("\r\n"); }
+fn put_u64(v: u64) { if v == 0 { put("0"); return; } let mut tmp = [0u8; 20]; let mut n = v; let mut pos = 0; while n > 0 { tmp[pos] = b'0' + (n % 10) as u8; n /= 10; pos += 1; } while pos > 0 { pos -= 1; put(core::str::from_utf8(&[tmp[pos]]).unwrap_or("")); } }
 static BANNER: &str = "\r\nHybridOS hyb-sandbox v0.1 - Container Descartavel de Aplicacoes\r\n";
 static SPEC_PROMPT: &str = "especificacao do container (ou vazio para padrao): ";
-
-fn read_line(buf: &mut [u8]) -> usize {
-    let r = sys_read(STDIN_FILENO, buf);
-    if r < 0 { 0 } else { r as usize }
-}
-
-fn trimmed_len(buf: &[u8], n: usize) -> usize {
-    let mut len = n;
-    while len > 0 && (buf[len - 1] == b'\n' || buf[len - 1] == b'\r') { len -= 1; }
-    len
-}
-
+fn read_line(buf: &mut [u8]) -> usize { let r = sys_read(STDIN_FILENO, buf); if r < 0 { 0 } else { r as usize } }
+fn trimmed_len(buf: &[u8], n: usize) -> usize { let mut len = n; while len > 0 && (buf[len - 1] == b'\n' || buf[len - 1] == b'\r') { len -= 1; } len }
 fn run() {
     put(BANNER);
     put("PID do sandbox: "); put_u64(sys_getpid() as u64); put("\r\n");
@@ -51,9 +25,4 @@ fn run() {
     put("desmontando e descartando container...\r\n");
     putln("hyb-sandbox: container descartado com sucesso.");
 }
-
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    run();
-    sys_exit(0);
-}
+#[no_mangle] pub extern "C" fn _start() -> ! { run(); sys_exit(0); }
