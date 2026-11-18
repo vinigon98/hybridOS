@@ -997,7 +997,7 @@ pub unsafe fn render_cat7_app(
 }
 
 /// Dispatches mouse clicks for Category 7 applications.
-pub fn handle_cat7_click(id: u8, cx: usize, cy: usize, desk: &mut DesktopState) -> bool {
+pub fn handle_cat7_click(id: u8, cx: usize, cy: usize, is_double_click: bool, desk: &mut DesktopState) -> bool {
     match id {
         48 => handle_classic_games_click(cx, cy, desk),
         49 => handle_accessibility_click(cx, cy, desk),

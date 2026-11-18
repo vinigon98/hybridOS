@@ -2478,7 +2478,7 @@ pub unsafe fn render_cat4_app(
 }
 
 /// Handles click events for Category 4 applications with precise hitboxes and real mutations.
-pub fn handle_cat4_click(id: u8, cx: usize, cy: usize, desk: &mut DesktopState) -> bool {
+pub fn handle_cat4_click(id: u8, cx: usize, cy: usize, is_double_click: bool, desk: &mut DesktopState) -> bool {
     ensure_state_init();
 
     // Determine window dimensions if available for relative coordinate normalization

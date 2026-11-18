@@ -452,7 +452,7 @@ pub unsafe fn render_cat6_app(
 }
 
 /// Dispatches mouse clicks for Category 6 applications.
-pub fn handle_cat6_click(id: u8, cx: usize, cy: usize, desk: &mut DesktopState) -> bool {
+pub fn handle_cat6_click(id: u8, cx: usize, cy: usize, is_double_click: bool, desk: &mut DesktopState) -> bool {
     match id {
         42 => handle_photo_viewer_click(cx, cy, desk),
         43 => handle_paint_studio_click(cx, cy, desk),

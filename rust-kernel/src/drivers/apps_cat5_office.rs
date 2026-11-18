@@ -1053,7 +1053,7 @@ pub unsafe fn render_cat5_app(
 }
 
 /// Handle mouse clicks for Category 5 applications.
-pub fn handle_cat5_click(id: u8, cx: usize, cy: usize, desk: &mut DesktopState) -> bool {
+pub fn handle_cat5_click(id: u8, cx: usize, cy: usize, is_double_click: bool, desk: &mut DesktopState) -> bool {
     ensure_cat5_init();
     let mut state = CAT5_STATE.lock();
 

@@ -429,7 +429,7 @@ pub unsafe fn render_cat1_app(
 }
 
 /// Handles click events for Category 1 apps (translates screen or relative coordinates).
-pub fn handle_cat1_click(id: u8, cx: usize, cy: usize, desk: &mut DesktopState) -> bool {
+pub fn handle_cat1_click(id: u8, cx: usize, cy: usize, is_double_click: bool, desk: &mut DesktopState) -> bool {
     ensure_cat1_initialized();
 
     let (canvas_x, canvas_y, canvas_w, canvas_h) = {

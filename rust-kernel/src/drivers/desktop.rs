@@ -242,6 +242,11 @@ pub struct Window {
     pub saved_h: usize,
 }
 
+/// Limite de tempo (ms) para considerar duplo clique
+pub const DOUBLE_CLICK_MAX_MS: u64 = 500;
+/// Limite de distância (pixels) entre dois cliques para considerar duplo clique
+pub const DOUBLE_CLICK_MAX_DIST: i32 = 12;
+
 pub struct DesktopState {
     pub active: bool,
     pub needs_full_redraw: bool,
@@ -267,6 +272,10 @@ pub struct DesktopState {
     pub calc_acc: f64,
     pub calc_op: Option<char>,
     pub active_tab: usize,
+    // Rastreamento de duplo clique
+    pub last_click_time: u64,
+    pub last_click_x: i32,
+    pub last_click_y: i32,
 }
 
 impl DesktopState {
@@ -407,6 +416,9 @@ pub fn init_desktop() {
         saved_cursor_y: 400,
         cursor_saved_valid: false,
         cursor_bg: [0; 12 * 16],
+        last_click_time: 0,
+        last_click_x: 0,
+        last_click_y: 0,
         windows,
         term_lines,
         vfs_entries: Vec::new(),
@@ -556,7 +568,7 @@ pub fn verify_category_apps(cat: u8) -> usize {
                 dispatch_app_render(app_id, fb, pitch, scr_w, scr_h, cx, cy, cw, ch, desk, "", "root@hybridos:/# ");
             }
             // Send safe interactive click in toolbar / top tab region (cx + 20, cy + 16)
-            let _ = dispatch_app_click(app_id, cx + 20, cy + 16, desk);
+            let _ = dispatch_app_click(app_id, cx + 20, cy + 16, false, desk);
 
             if let (Some(i), Some((was_open, was_min))) = (win_idx, prev_state) {
                 desk.windows[i].open = was_open;
@@ -873,6 +885,10 @@ pub fn update_desktop_interactive(current_input: &str, prompt: &str) {
 
     if trigger_full {
         redraw_full_desktop(current_input, prompt);
+        // Reset needs_full_redraw para evitar redesenho contínuo da tela inteira
+        if let Some(ref mut desk) = *DESKTOP.lock() {
+            desk.needs_full_redraw = false;
+        }
     } else {
         let mut con_lock = GOP_CONSOLE.lock();
         let mut desk_lock = DESKTOP.lock();
@@ -1123,8 +1139,24 @@ fn handle_desktop_click(cx: usize, cy: usize) {
                 return;
             }
 
-            // Delegate client-area clicks to the dedicated category handler
-            let _ = dispatch_app_click(w_id, cx, cy, desk);
+            // Delegate client-area clicks to the dedicated category handler.
+            // Converte coordenadas globais (cx, cy) para locais da janela (cx_local, cy_local).
+            let cx_local = cx.saturating_sub(w_x);
+            let cy_local = cy.saturating_sub(w_y);
+
+            // Detecção de duplo clique
+            let now = crate::arch::idt::SYSTEM_TICKS.load(core::sync::atomic::Ordering::Relaxed);
+            let dt = now.saturating_sub(desk.last_click_time);
+            let dx = (cx as i32 - desk.last_click_x).abs();
+            let dy = (cy as i32 - desk.last_click_y).abs();
+            let is_double_click = dt <= DOUBLE_CLICK_MAX_MS && dx <= DOUBLE_CLICK_MAX_DIST && dy <= DOUBLE_CLICK_MAX_DIST && desk.last_click_time != 0;
+
+            // Atualiza rastreamento de clique
+            desk.last_click_time = now;
+            desk.last_click_x = cx as i32;
+            desk.last_click_y = cy as i32;
+
+            let _ = dispatch_app_click(w_id, cx_local, cy_local, is_double_click, desk);
             if w_id == AppId::FileExplorer {
                 do_refresh_vfs = true;
             }
@@ -1163,16 +1195,24 @@ fn handle_desktop_click(cx: usize, cy: usize) {
 }
 
 /// Central click dispatcher routing all 50 Tier-0 applications to their category modules.
-fn dispatch_app_click(id: AppId, cx: usize, cy: usize, desk: &mut DesktopState) -> bool {
+/// `cx_local`/`cy_local` são coordenadas já traduzidas para o espaço da janela do app.
+/// `is_double_click` indica se este é o segundo clique de um duplo clique.
+fn dispatch_app_click(
+    id: AppId,
+    cx_local: usize,
+    cy_local: usize,
+    is_double_click: bool,
+    desk: &mut DesktopState,
+) -> bool {
     let n = id.as_u8();
     match n {
-        1..=8   => apps_cat1_files::handle_cat1_click(n, cx, cy, desk),
-        9..=18  => apps_cat2_admin::handle_cat2_click(n, cx, cy, desk),
-        19..=25 => apps_cat3_exec::handle_cat3_click(n, cx, cy, desk),
-        26..=33 => apps_cat4_net::handle_cat4_click(n, cx, cy, desk),
-        34..=41 => apps_cat5_office::handle_cat5_click(n, cx, cy, desk),
-        42..=47 => apps_cat6_media::handle_cat6_click(n, cx, cy, desk),
-        48..=50 => apps_cat7_extra::handle_cat7_click(n, cx, cy, desk),
+        1..=8   => apps_cat1_files::handle_cat1_click(n, cx_local, cy_local, is_double_click, desk),
+        9..=18  => apps_cat2_admin::handle_cat2_click(n, cx_local, cy_local, is_double_click, desk),
+        19..=25 => apps_cat3_exec::handle_cat3_click(n, cx_local, cy_local, is_double_click, desk),
+        26..=33 => apps_cat4_net::handle_cat4_click(n, cx_local, cy_local, is_double_click, desk),
+        34..=41 => apps_cat5_office::handle_cat5_click(n, cx_local, cy_local, is_double_click, desk),
+        42..=47 => apps_cat6_media::handle_cat6_click(n, cx_local, cy_local, is_double_click, desk),
+        48..=50 => apps_cat7_extra::handle_cat7_click(n, cx_local, cy_local, is_double_click, desk),
         _ => false,
     }
 }

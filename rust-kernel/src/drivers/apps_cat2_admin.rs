@@ -1463,7 +1463,7 @@ unsafe fn render_power_options(
 
 /// Handles click events for Category 2 apps (Programas 09 a 18).
 /// Dispatches real mutations to kernel scheduler, devices, VFS, or hardware port I/O.
-pub fn handle_cat2_click(id: u8, cx: usize, cy: usize, desk: &mut DesktopState) -> bool {
+pub fn handle_cat2_click(id: u8, cx: usize, cy: usize, is_double_click: bool, desk: &mut DesktopState) -> bool {
     // Determine canvas-relative click coordinates and real canvas dimensions (cw, ch)
     let (rel_x, rel_y, cw, ch) = if let Some(w) = desk.windows.iter().find(|w| w.open && !w.minimized && (
         (id == 9 && w.id == crate::drivers::desktop::AppId::TaskManager) ||

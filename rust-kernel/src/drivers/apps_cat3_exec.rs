@@ -2029,6 +2029,7 @@ pub fn handle_cat3_click(
     id: u8,
     click_x: usize,
     click_y: usize,
+    is_double_click: bool,
     desk: &mut DesktopState,
 ) -> bool {
     ensure_cat3_state_initialized();
