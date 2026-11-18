@@ -3,7 +3,7 @@
 # Arquivo mestre de configuração declarativa. Gerido pelo utilitário `hybctl`
 # e exposto graficamente pelo `hyb-settings`. Todos os 100 módulos de
 # configuração (~1.000 parâmetros) residem em /etc/hybridos/; este arquivo
-# contempla os Módulos 1 a 5 (52 parâmetros) implementados pelo Agente 6.
+# contempla os Módulos 1 a 10 (100 parâmetros).
 #
 # Formato: TOML. Chaves são acessíveis por `hybctl` através do nome pontuado:
 #   hybctl get display.refresh_rate
@@ -103,3 +103,94 @@ window_tiling = false
 virtual_desktops = true
 compositor_effects = true
 tray_telemetry = false
+
+# ============================================================
+# Módulo 6 — Ambiente de Desenvolvimento, Sistema de Arquivos e Memória (13)
+# ============================================================
+
+[developer]
+mode_default = true
+localhost_domains = true
+
+[fs]
+unlimited_paths = true
+case_sensitivity_per_dir = true
+dev_optimization = true
+
+[security]
+dev_trust_folders = true
+
+[locale]
+utf8_everywhere = true
+technical_formats = true
+
+[env]
+session_reload = true
+
+[memory]
+zram_swap = true
+
+[virt]
+dynamic_memory = true
+port_auto_bind = true
+
+[storage]
+temp_tmpfs = true
+
+# ============================================================
+# Módulo 7 — Modo Gamer de Kernel e Priorização de Tempo Real (8)
+# ============================================================
+
+[system]
+hostname = "hyb-workstation"
+startup_sandbox = true
+background_freeze = true
+
+[gaming]
+kernel_boost = true
+replay_buffer_ram = true
+fullscreen_silence = true
+hvci_toggle_per_boot = false
+shader_cache_manager = true
+overlay_minimal = true
+
+# ============================================================
+# Módulo 8 — Pilha de Rede de Baixa Latência, DNS e Segurança (11)
+# ============================================================
+
+[net]
+dns_encrypted = true
+congestion_control_bbr = true
+nic_low_latency = true
+qos_gaming_voip = true
+ipv6_privacy = true
+zero_config_share = true
+ntp_high_precision = true
+wifi_band_steering = true
+no_p2p_updates = true
+wireguard_native = true
+dev_firewall_profiles = true
+
+# ============================================================
+# Módulo 9 — Privacidade Absoluta e Soberania do Usuário (9)
+# ============================================================
+
+[privacy]
+zero_telemetry = true
+no_ad_id = true
+offline_search_only = true
+smart_indexer = true
+hardware_kill_switches = true
+clipboard_guard = true
+no_nag_screens = true
+no_silent_installs = true
+clean_uninstall = true
+
+# ============================================================
+# Módulo 10 — Atualizações Sob Controle, Imutabilidade e Portabilidade (7)
+# ============================================================
+
+[update]
+manual_or_scheduled = true
+driver_pinning = true
+channel_selection = "lts"
