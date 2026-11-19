@@ -1,0 +1,11 @@
+[package]
+name = "hyb-config-tree"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "hyb-config-tree"
+path = "src/main.rs"
+
+[dependencies]
+libhybrid_sys = { path = "../../libhybrid_sys" }

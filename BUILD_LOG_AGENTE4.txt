@@ -1,0 +1,252 @@
+﻿cargo : warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+No linha:1 caractere:1
++ cargo build -p hyb-settings -p hyb-tui-config -p hyb-admin -p hyb-ser ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: profil...workspace root::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+package:   C:\Users\Vinicius\Documents\HybridOS-Kernel\userland\apps\hybctl\Cargo.toml
+workspace: C:\Users\Vinicius\Documents\HybridOS-Kernel\userland\Cargo.toml
+warning: unused import: `alloc::string::String`
+ --> apps\hyb-clean\src\main.rs:9:5
+  |
+9 | use alloc::string::String;
+  |     ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `alloc::vec::Vec`
+  --> apps\hyb-clean\src\main.rs:10:5
+   |
+10 | use alloc::vec::Vec;
+   |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `print`
+  --> apps\hyb-clean\src\main.rs:14:21
+   |
+14 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+
+warning: `hyb-clean` (bin "hyb-clean") generated 3 warnings (run `cargo fix --bin "hyb-clean" -p hyb-clean` to apply 3 
+suggestions)
+warning: unused import: `print`
+  --> apps\hyb-verify\src\main.rs:14:21
+   |
+14 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+  --> apps\hyb-verify\src\main.rs:53:15
+   |
+53 | fn u64_to_hex(mut val: u64) -> String {
+   |               ----^^^
+   |               |
+   |               help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `alloc::string::String`
+ --> apps\hyb-disk-cli\src\main.rs:9:5
+  |
+9 | use alloc::string::String;
+  |     ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `print`
+  --> apps\hyb-disk-cli\src\main.rs:14:21
+   |
+14 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+
+warning: unused import: `print`
+  --> apps\hyb-guard\src\main.rs:14:21
+   |
+14 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `alloc::string::String`
+ --> apps\hyb-trim\src\main.rs:9:5
+  |
+9 | use alloc::string::String;
+  |     ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `alloc::vec::Vec`
+  --> apps\hyb-trim\src\main.rs:10:5
+   |
+10 | use alloc::vec::Vec;
+   |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `print`
+  --> apps\hyb-trim\src\main.rs:14:21
+   |
+14 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+
+warning: unused import: `alloc::format`
+ --> apps\hyb-snapshot\src\main.rs:9:5
+  |
+9 | use alloc::format;
+  |     ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `print`
+  --> apps\hyb-snapshot\src\main.rs:15:21
+   |
+15 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+
+warning: unused import: `alloc::format`
+ --> apps\hyb-sudo\src\main.rs:9:5
+  |
+9 | use alloc::format;
+  |     ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `print`
+  --> apps\hyb-sudo\src\main.rs:15:21
+   |
+15 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+
+warning: unused import: `print`
+  --> apps\hyb-config-tree\src\main.rs:14:21
+   |
+14 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `print`
+  --> apps\hyb-image\src\main.rs:14:21
+   |
+14 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `hyb-verify` (bin "hyb-verify") generated 2 warnings (run `cargo fix --bin "hyb-verify" -p hyb-verify` to 
+apply 2 suggestions)
+warning: `hyb-disk-cli` (bin "hyb-disk-cli") generated 2 warnings (run `cargo fix --bin "hyb-disk-cli" -p 
+hyb-disk-cli` to apply 2 suggestions)
+warning: `hyb-guard` (bin "hyb-guard") generated 1 warning (run `cargo fix --bin "hyb-guard" -p hyb-guard` to apply 1 
+suggestion)
+warning: `hyb-trim` (bin "hyb-trim") generated 3 warnings (run `cargo fix --bin "hyb-trim" -p hyb-trim` to apply 3 
+suggestions)
+warning: `hyb-snapshot` (bin "hyb-snapshot") generated 2 warnings (run `cargo fix --bin "hyb-snapshot" -p 
+hyb-snapshot` to apply 2 suggestions)
+warning: `hyb-sudo` (bin "hyb-sudo") generated 2 warnings (run `cargo fix --bin "hyb-sudo" -p hyb-sudo` to apply 2 
+suggestions)
+warning: `hyb-config-tree` (bin "hyb-config-tree") generated 1 warning (run `cargo fix --bin "hyb-config-tree" -p 
+hyb-config-tree` to apply 1 suggestion)
+warning: `hyb-image` (bin "hyb-image") generated 1 warning (run `cargo fix --bin "hyb-image" -p hyb-image` to apply 1 
+suggestion)
+warning: unused import: `print`
+  --> apps\hyb-firewall\src\main.rs:15:21
+   |
+15 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `print`
+  --> apps\hyb-crypt\src\main.rs:14:21
+   |
+14 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+  --> apps\hyb-crypt\src\main.rs:45:15
+   |
+45 | fn u64_to_hex(mut val: u64) -> String {
+   |               ----^^^
+   |               |
+   |               help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `print`
+  --> apps\hyb-print\src\main.rs:14:21
+   |
+14 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `read_file` is never used
+  --> apps\hyb-print\src\main.rs:63:4
+   |
+63 | fn read_file(path: &str) -> Option<Vec<u8>> {
+   |    ^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `alloc::string::String`
+ --> apps\hyb-admin\src\main.rs:9:5
+  |
+9 | use alloc::string::String;
+  |     ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `print`
+  --> apps\hyb-admin\src\main.rs:14:21
+   |
+14 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+
+warning: unused import: `print`
+  --> apps\hyb-policy\src\main.rs:14:21
+   |
+14 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `alloc::string::String`
+ --> apps\hyb-fsctl\src\main.rs:9:5
+  |
+9 | use alloc::string::String;
+  |     ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `print`
+  --> apps\hyb-fsctl\src\main.rs:14:21
+   |
+14 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+
+warning: unused import: `print`
+  --> apps\hyb-fsck\src\main.rs:14:21
+   |
+14 | use libhybrid_sys::{print, println};
+   |                     ^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `hyb-firewall` (bin "hyb-firewall") generated 1 warning (run `cargo fix --bin "hyb-firewall" -p hyb-firewall` 
+to apply 1 suggestion)
+warning: `hyb-crypt` (bin "hyb-crypt") generated 2 warnings (run `cargo fix --bin "hyb-crypt" -p hyb-crypt` to apply 2 
+suggestions)
+warning: `hyb-print` (bin "hyb-print") generated 2 warnings (run `cargo fix --bin "hyb-print" -p hyb-print` to apply 1 
+suggestion)
+warning: `hyb-admin` (bin "hyb-admin") generated 2 warnings (run `cargo fix --bin "hyb-admin" -p hyb-admin` to apply 2 
+suggestions)
+warning: `hyb-policy` (bin "hyb-policy") generated 1 warning (run `cargo fix --bin "hyb-policy" -p hyb-policy` to 
+apply 1 suggestion)
+warning: `hyb-fsctl` (bin "hyb-fsctl") generated 2 warnings (run `cargo fix --bin "hyb-fsctl" -p hyb-fsctl` to apply 2 
+suggestions)
+warning: `hyb-fsck` (bin "hyb-fsck") generated 1 warning (run `cargo fix --bin "hyb-fsck" -p hyb-fsck` to apply 1 
+suggestion)
+    Finished `release` profile [optimized] target(s) in 0.12s

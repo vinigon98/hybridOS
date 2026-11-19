@@ -3,5 +3,10 @@ name = "win_sysbench"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "win_sysbench"
+path = "src/main.rs"
+
 [dependencies]
 libhybrid_sys = { path = "../../libhybrid_sys" }
+nt_dlls = { path = "../../nt_dlls" }

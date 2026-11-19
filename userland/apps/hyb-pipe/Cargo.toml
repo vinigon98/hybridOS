@@ -2,5 +2,10 @@
 name = "hyb-pipe"
 version = "0.1.0"
 edition = "2021"
+
+[[bin]]
+name = "hyb-pipe"
+path = "src/main.rs"
+
 [dependencies]
 libhybrid_sys = { path = "../../libhybrid_sys" }

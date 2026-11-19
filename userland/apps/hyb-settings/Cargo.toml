@@ -2,6 +2,7 @@
 name = "hyb-settings"
 version = "0.1.0"
 edition = "2021"
+description = "Central Unificada de Configurações do Hybridos OS — interface dos Módulos 1 a 5"
 
 [[bin]]
 name = "hyb-settings"

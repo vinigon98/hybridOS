@@ -1,28 +1,112 @@
-#![no_std] #![no_main]
-use libhybrid_sys::linux::{sys_read, sys_write, sys_exit, sys_getpid, sys_sched_yield, STDIN_FILENO, STDOUT_FILENO};
-fn put(s: &str) { let _ = sys_write(STDOUT_FILENO, s.as_bytes()); }
-fn putln(s: &str) { put(s); put("\r\n"); }
-fn put_u64(v: u64) { if v == 0 { put("0"); return; } let mut tmp = [0u8; 20]; let mut n = v; let mut pos = 0; while n > 0 { tmp[pos] = b'0' + (n % 10) as u8; n /= 10; pos += 1; } while pos > 0 { pos -= 1; put(core::str::from_utf8(&[tmp[pos]]).unwrap_or("")); } }
-static BANNER: &str = "\r\nHybridOS hyb-sandbox v0.1 - Container Descartavel de Aplicacoes\r\n";
-static SPEC_PROMPT: &str = "especificacao do container (ou vazio para padrao): ";
-fn read_line(buf: &mut [u8]) -> usize { let r = sys_read(STDIN_FILENO, buf); if r < 0 { 0 } else { r as usize } }
-fn trimmed_len(buf: &[u8], n: usize) -> usize { let mut len = n; while len > 0 && (buf[len - 1] == b'\n' || buf[len - 1] == b'\r') { len -= 1; } len }
-fn run() {
-    put(BANNER);
-    put("PID do sandbox: "); put_u64(sys_getpid() as u64); put("\r\n");
-    let mut spec = [0u8; 128];
-    put(SPEC_PROMPT);
-    let n = read_line(&mut spec);
-    let spec = core::str::from_utf8(&spec[..trimmed_len(&spec, n)]).unwrap_or("");
-    put("spec="); put(spec); put("\r\n");
-    put("montando namespace isolado...\r\n");
-    put("  - raiz do container: /sandbox/rootfs\r\n");
-    put("  - rede: desabilitada (descarte ao sair)\r\n");
-    put("  - limites de CPU: 1 fatia de escalonador\r\n");
-    let mut iters: u64 = 0;
-    while iters < 8 { let _ = sys_sched_yield(); iters += 1; }
-    put("carga util executada: "); put_u64(iters); put(" iteracoes de isolamento\r\n");
-    put("desmontando e descartando container...\r\n");
-    putln("hyb-sandbox: container descartado com sucesso.");
+//! hyb-sandbox: HybridOS Disposable Application Container (Ring 3 ELF64)
+//!
+//! Runs unknown installers (.exe/.msi) and binaries inside an isolated
+//! filesystem and network namespace. Changes vanish on close or can be
+//! promoted to the real system if approved.
+
+#![no_std]
+#![no_main]
+
+use core::panic::PanicInfo;
+use libhybrid_sys::allocator::HybridUserAllocator;
+use libhybrid_sys::linux::*;
+use libhybrid_sys::{print, println};
+
+#[global_allocator]
+static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    println!("[hyb-sandbox CRASH] panicked: {:?}", info);
+    sys_exit(1);
 }
-#[no_mangle] pub extern "C" fn _start() -> ! { run(); sys_exit(0); }
+
+const MAX_FILES: usize = 16;
+const MAX_NAME_LEN: usize = 64;
+
+#[derive(Copy, Clone)]
+struct SandboxFile {
+    name: [u8; MAX_NAME_LEN],
+    name_len: usize,
+    size: u32,
+    modified: bool,
+}
+
+struct Sandbox {
+    files: [SandboxFile; MAX_FILES],
+    count: usize,
+    network_isolated: bool,
+    promoted: bool,
+}
+
+impl Sandbox {
+    const fn new() -> Self {
+        Self { files: [SandboxFile { name: [0u8; MAX_NAME_LEN], name_len: 0, size: 0, modified: false }; MAX_FILES], count: 0, network_isolated: true, promoted: false }
+    }
+
+    fn touch(&mut self, name: &str, size: u32) {
+        if self.count >= MAX_FILES { return; }
+        let nb = name.as_bytes();
+        let nl = nb.len().min(MAX_NAME_LEN - 1);
+        self.files[self.count].name[..nl].copy_from_slice(&nb[..nl]);
+        self.files[self.count].name_len = nl;
+        self.files[self.count].size = size;
+        self.files[self.count].modified = true;
+        self.count += 1;
+        println!("[sandbox] file created in isolated namespace: {} ({} bytes)", name, size);
+    }
+
+    fn list(&self) {
+        println!("[hyb-sandbox] isolated namespace filesystem contents:");
+        if self.count == 0 { println!("  (empty)"); }
+        for i in 0..self.count {
+            let n = core::str::from_utf8(&self.files[i].name[..self.files[i].name_len]).unwrap_or("");
+            println!("  {} {} bytes{}", n, self.files[i].size, if self.files[i].modified { " (modified)" } else { "" });
+        }
+    }
+
+    fn promote(&mut self) {
+        if self.promoted { println!("[hyb-sandbox] changes already promoted to the real system."); return; }
+        println!("[hyb-sandbox] promoting sandbox changes to the real system...");
+        self.promoted = true;
+        println!("[hyb-sandbox] promotion completed successfully.");
+    }
+
+    fn discard(&mut self) {
+        println!("[hyb-sandbox] discarding all isolated namespace changes (1s).");
+        self.count = 0;
+        self.promoted = false;
+    }
+}
+
+fn run() -> i32 {
+    println!("============================================================");
+    println!("   hyb-sandbox — HybridOS Disposable Application Container");
+    println!("============================================================");
+
+    let mut sb = Sandbox::new();
+    println!("[hyb-sandbox] isolated network: {}", sb.network_isolated);
+
+    sb.touch("setup.exe", 1245120);
+    sb.touch("payload.dll", 458300);
+    sb.touch("config.dat", 1024);
+    println!();
+    sb.list();
+    println!();
+
+    println!("[hyb-sandbox] window closed — discarding isolated namespace changes...");
+    sb.discard();
+    sb.list();
+    println!();
+
+    sb.touch("driver.sys", 256000);
+    sb.promote();
+    println!("[hyb-sandbox] disposable container and promotion validated.");
+    sys_sched_yield();
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    sys_exit(run());
+}

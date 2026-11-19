@@ -5,6 +5,8 @@
 #![no_std]
 #![no_main]
 
+extern crate alloc;
+
 use core::panic::PanicInfo;
 use libhybrid_sys::allocator::HybridUserAllocator;
 use libhybrid_sys::{print, println};
@@ -89,7 +91,7 @@ fn load_doc() -> Option<TomlDoc> {
                 if let Some(eq) = line.find('=') {
                     let key = trim(&line[..eq]); let val = parse_value(&line[eq+1..]);
                     if key.is_empty() { continue; }
-                    match &cur { Some(s) => doc.set(s, key, val), None => doc.set("__root__", key, val); }
+                    match &cur { Some(s) => doc.set(s, key, val), None => doc.set("__root__", key, val), }
                 }
             }
             return Some(doc);
@@ -196,7 +198,7 @@ fn cmd_set(key: &str, value_raw: &str) {
     let Some((sec, k)) = split_key(key) else { println!("[hyb-settings] formato inválido (use secao.chave): {}", key); return; };
     let val = parse_value(value_raw);
     let mut doc = match load_doc() { Some(d) => d, None => TomlDoc::new() };
-    doc.set(sec, k, val);
+    doc.set(sec, k, val.clone());
     let mut out = String::from("# /etc/hybridos/system.toml — Configuração Base do Hybridos OS\n# Atualizado via `hyb-settings`.\n\n");
     for s in &doc.sections { out.push_str(&format!("[{}]\n", s)); for e in doc.entries.iter() { if e.section == *s { out.push_str(&format!("{} = {}\n", e.key, format_value(&e.value))); } } out.push('\n'); }
     if write_file(CONFIG_PATHS[0], &out) { println!("{} = {} (gravado)", key, format_value(&val)); }
