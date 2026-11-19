@@ -275,8 +275,6 @@ pub extern "C" fn _start() -> ! {
         drivers::desktop::update_desktop_interactive(&line_buf, &shell.prompt());
 
         // Read COM1 UART Serial Port (0x3F8) or PS/2 Keyboard buffer
-        let _ = drivers::poll_ps2_controller();
-        drivers::desktop::update_desktop_interactive(&line_buf, &shell.prompt());
         let mut byte_opt = arch::serial::COM1.lock().receive();
         if byte_opt.is_none() {
             if let Some(c) = drivers::pop_keyboard_char() {

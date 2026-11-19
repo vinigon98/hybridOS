@@ -1758,55 +1758,40 @@ unsafe fn draw_single_crystal_window(
     let title_color = if is_focused { 0x00FFFFFF } else { 0x00CBD5E1 };
     draw_text_clipped(fb, pitch, scr_w, scr_h, w_x + 14, w_y + 8, w_x + w_w - 100, w_title, title_color, None);
 
-    // 3. Padronized 3-Button Control Capsule (Minimize, Maximize, Close)
-    //    [-]  [□]  [×]  — tooltips ao hover, fechar em destaque vermelho
+    // 3. Vitrified 3-Button Control Capsule (Minimize [-], Maximize [□], Close [X])
     let (mx, my) = {
         let m = MOUSE_STATE.lock();
         (m.x.max(0) as usize, m.y.max(0) as usize)
     };
-    let btn_w = 32;
-    let btn_h = 26;
-    let cap_x = w_x + w_w - (btn_w * 3 + 12);
-    let cap_y = w_y + 6;
+    let cap_w = 84usize;
+    let cap_h = 22usize;
+    let cap_x = w_x + w_w - 96;
+    let cap_y = w_y + 5;
 
-    let min_x = cap_x;
-    let max_x = cap_x + btn_w + 4;
-    let cls_x = cap_x + (btn_w + 4) * 2;
+    let hov_cls = my >= cap_y && my < cap_y + cap_h && mx >= cap_x + 56 && mx < cap_x + cap_w;
+    let hov_max = my >= cap_y && my < cap_y + cap_h && mx >= cap_x + 28 && mx < cap_x + 56;
+    let hov_min = my >= cap_y && my < cap_y + cap_h && mx >= cap_x && mx < cap_x + 28;
 
-    let hov_min = my >= cap_y && my <= cap_y + btn_h && mx >= min_x && mx < min_x + btn_w;
-    let hov_max = my >= cap_y && my <= cap_y + btn_h && mx >= max_x && mx < max_x + btn_w;
-    let hov_cls = my >= cap_y && my <= cap_y + btn_h && mx >= cls_x && mx <= cls_x + btn_w;
+    draw_glass_control_capsule(fb, pitch, scr_w, scr_h, cap_x, cap_y, hov_cls, hov_max, hov_min);
 
-    // Desenha os 3 botões com estados visuais
-    let btn_states = [
-        (min_x, "Minimizar", hov_min, ButtonState::Hover),
-        (max_x, "Maximizar", hov_max, ButtonState::Hover),
-        (cls_x, "Fechar", hov_cls, ButtonState::Hover),
-    ];
-
-    for (bx, label, hovered, _) in btn_states.iter() {
-        let is_close = *label == "Fechar";
-        let state = if *hovered {
-            ButtonState::Hover
-        } else {
-            ButtonState::Normal
-        };
-        let bg = if is_close && *hovered { ERROR_COLOR } else { state.bg_color() };
-        fill_rounded_rect(fb, pitch, scr_w, scr_h, *bx, cap_y, btn_w, btn_h, BORDER_RADIUS_M, bg);
-        draw_rounded_rect_border(fb, pitch, scr_w, scr_h, *bx, cap_y, btn_w, btn_h, BORDER_RADIUS_M, BORDER_SUBTLE);
-
-        let glyph = if *label == "Minimizar" { "–" } else if *label == "Maximizar" { "□" } else { "×" };
-        let glyph_color = if is_close && *hovered { TEXT_PRIMARY } else { state.text_color() };
-        let glyph_x = bx + (btn_w.saturating_sub(8)) / 2;
-        draw_text_clipped(fb, pitch, scr_w, scr_h, glyph_x, cap_y + 4, bx + btn_w, glyph, glyph_color, None);
-
-        // Tooltip ao hover
-        if *hovered {
-            desk.tooltip.text = String::from(*label);
-            desk.tooltip.x = *bx as i32;
-            desk.tooltip.y = (cap_y as i32) - 24;
-            desk.tooltip.visible = true;
-        }
+    // Tooltip ao hover sincronizado
+    if hov_min {
+        desk.tooltip.text = String::from("Minimizar");
+        desk.tooltip.x = cap_x as i32 + 14;
+        desk.tooltip.y = (cap_y as i32) - 10;
+        desk.tooltip.visible = true;
+    } else if hov_max {
+        desk.tooltip.text = String::from("Maximizar");
+        desk.tooltip.x = cap_x as i32 + 42;
+        desk.tooltip.y = (cap_y as i32) - 10;
+        desk.tooltip.visible = true;
+    } else if hov_cls {
+        desk.tooltip.text = String::from("Fechar");
+        desk.tooltip.x = cap_x as i32 + 70;
+        desk.tooltip.y = (cap_y as i32) - 10;
+        desk.tooltip.visible = true;
+    } else if desk.tooltip.visible {
+        desk.tooltip.visible = false;
     }
 
     // 4. Window Client Canvas Area

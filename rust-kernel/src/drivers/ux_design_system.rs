@@ -438,7 +438,6 @@ pub fn draw_focus_ring(
     let rw = w.saturating_add(pad * 2);
     let rh = h.saturating_add(pad * 2);
     unsafe {
-        let _ = fill_rounded_rect(fb, pitch, scr_w, scr_h, rx, ry, rw, rh, BORDER_RADIUS_M, OVERLAY_DARK);
         let _ = draw_rounded_rect_border(fb, pitch, scr_w, scr_h, rx, ry, rw, rh, BORDER_RADIUS_M, color);
     }
 }
@@ -648,7 +647,6 @@ pub fn draw_keyboard_focus_ring(
         let ry = y.saturating_sub(pad);
         let rw = w.saturating_add(pad * 2);
         let rh = h.saturating_add(pad * 2);
-        let _ = fill_rounded_rect(fb, pitch, scr_w, scr_h, rx, ry, rw, rh, BORDER_RADIUS_M, OVERLAY_DARK);
         let color = if is_high_contrast() { HC_BORDER } else { BORDER_FOCUSED };
         let _ = draw_rounded_rect_border(fb, pitch, scr_w, scr_h, rx, ry, rw, rh, BORDER_RADIUS_M, color);
     }
