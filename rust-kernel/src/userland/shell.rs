@@ -1390,12 +1390,12 @@ impl HybridShell {
     /// Tamb√©m aceita IP direto: 10.0.2.2/programa.exe
     /// Op√ß√£o --run executa o arquivo apos baixar (apenas PE32+/ELF64).
     /// Syntax: download [--run] <url> <destino>
-        /// Command `download`: N„o implementado nesta vers„o.
-    /// O HybridOS n„o suporta download via HTTP neste momento.
-    /// Use 'run <arquivo>' para executar bin·rios j· presentes no VFS.
+        /// Command `download`: N√£o implementado nesta vers√£o.
+    /// O HybridOS n√£o suporta download via HTTP neste momento.
+    /// Use 'run <arquivo>' para executar bin√°rios j√° presentes no VFS.
     pub fn cmd_download(&mut self, _args: &[String]) -> Result<String, ShellError> {
-        Ok("Download n„o disponÌvel nesta vers„o.
-          Use 'run <arquivo>' para executar bin·rios j· presentes no VFS.
+        Ok("Download n√£o dispon√≠vel nesta vers√£o.
+          Use 'run <arquivo>' para executar bin√°rios j√° presentes no VFS.
           Use 'apps' para listar aplicativos nativos.
           ".to_string())
     }

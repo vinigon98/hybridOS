@@ -250,9 +250,8 @@ pub extern "C" fn _start() -> ! {
     drivers::desktop::init_desktop();
     let mut shell = userland::shell::HybridShell::new();
 
-    // Run Full Self-Test Verification Suite for Phases A, B and C
-    run_desktop_and_subsystem_self_tests(&mut shell);
-
+    // NOTE: Desktop starts with Terminal only. Do NOT auto-launch all 50 apps
+    // at boot - user launches apps via 'start <nome>' or desktop icons.
     crate::serial_println!("[GUI] HybridOS Desktop Environment & PS/2 Mouse active.");
     crate::serial_println!("[Shell] HybridShell interactive session started.");
     crate::serial_println!("[BOOT_STAGE_OK]");
