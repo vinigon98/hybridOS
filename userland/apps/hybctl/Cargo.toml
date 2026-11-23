@@ -1,10 +1,12 @@
 [package]
 name = "hybctl"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
+description = "Controlador Central de Configuracao do Sistema Hybridos OS (hybctl)"
 
 [[bin]]
 name = "hybctl"
 path = "src/main.rs"
 
-[workspace]
+[profile.release]
+opt-level = 3
