@@ -1620,19 +1620,23 @@ pub unsafe fn draw_crystal_glass_window_frame(
     // 1. Soft drop shadow under the window
     draw_soft_drop_shadow(fb, pitch, scr_w, scr_h, x, y, w, h, 6, 8, 4, 45);
 
-    // 2. Base glass tint & specular reflections (bound live to Personalization Studio #47)
+    // 2. Only draw the FRAME BORDER, not the entire window interior
+    // Title bar height
+    let title_h = 32usize;
+    let border_w = 4usize;
+
     let theme = crate::drivers::apps_cat6_media::get_current_theme();
     let tint_color = if active { theme.frame_active_color } else { theme.frame_inactive_color };
     let tint_alpha = if active { theme.glass_opacity } else { theme.glass_opacity.saturating_sub(40) };
-    let streak_alpha = 36u8; // ~14% specular reflection
+    let streak_alpha = 36u8;
 
     let r_sq = (6 * 6) as isize;
 
-    for py in y..y_end {
+    // === TOP: Title bar (full width, height=title_h) with rounded top corners ===
+    for py in y..(y + title_h).min(y_end) {
         let rel_y = py - y;
         let row_ptr = fb.add(py * pitch) as *mut u32;
 
-        // Calculate top corner rounding (r=6)
         let (row_x_start, row_x_end) = if rel_y < 6 {
             let dy = (6 - rel_y) as isize;
             let dx_in = isqrt((r_sq - dy * dy).max(0) as usize);
@@ -1646,36 +1650,110 @@ pub unsafe fn draw_crystal_glass_window_frame(
 
         for px in span_start..span_end {
             let orig = *row_ptr.add(px);
-
-            // Apply sapphire glass tint
             let mut col = blend_argb(orig, tint_color, tint_alpha);
 
-            // Specular reflection streaks: diagonal bands
             let streak_pattern = (px + py) % 48;
             if streak_pattern < 14 {
-                col = blend_argb(col, 0x00FFFFFF, streak_alpha);
+                col = blend_argb(col, 0x00FFFFFF, 36);
             } else if streak_pattern >= 14 && streak_pattern < 20 {
-                col = blend_argb(col, 0x00FFFFFF, streak_alpha / 2);
+                col = blend_argb(col, 0x00FFFFFF, 18);
             }
 
-            // Top highlight gradient on titlebar (first 32px)
-            if rel_y < 32 {
-                let grad_alpha = ((32 - rel_y) * 2).min(70) as u8;
-                col = blend_argb(col, 0x00E2E8F0, grad_alpha);
-            }
+            // Top highlight gradient on titlebar
+            let grad_alpha = ((title_h.saturating_sub(rel_y)) * 2).min(70) as u8;
+            col = blend_argb(col, 0x00E2E8F0, grad_alpha);
 
-            // 1px inner white chamfer at top and left
-            if rel_y == 1 || (px == span_start + 1 && rel_y > 1 && rel_y < h - 2) {
+            // 1px inner white chamfer at top
+            if rel_y == 1 {
                 col = blend_argb(col, 0x00FFFFFF, 120);
             }
-
-            // 1px dark outer stroke
-            if rel_y == 0 || px == span_start || px + 1 == span_end || py + 1 == y_end {
+            // 1px dark outer stroke at top
+            if rel_y == 0 {
+                col = 0x000F172A;
+            }
+            // 1px dark outer stroke at left/right edges of title bar
+            if px == span_start || px + 1 == span_end {
                 col = 0x000F172A;
             }
 
             *row_ptr.add(px) = col;
         }
+    }
+
+    // === LEFT BORDER (below title bar) ===
+    for py in (y + title_h)..y_end {
+        let row_ptr = fb.add(py * pitch) as *mut u32;
+        for px in x..(x + border_w).min(x_end) {
+            let orig = *row_ptr.add(px);
+            let mut col = blend_argb(orig, tint_color, tint_alpha.saturating_sub(30));
+            // 1px dark outer stroke at left edge
+            if px == x {
+                col = 0x000F172A;
+            }
+            // 1px inner white chamfer at left
+            if px == x + 1 {
+                col = blend_argb(col, 0x00FFFFFF, 80);
+            }
+            *row_ptr.add(px) = col;
+        }
+    }
+
+    // === RIGHT BORDER (below title bar) ===
+    let right_x = x_end.saturating_sub(border_w);
+    for py in (y + title_h)..y_end {
+        let row_ptr = fb.add(py * pitch) as *mut u32;
+        for px in right_x..x_end {
+            let orig = *row_ptr.add(px);
+            let mut col = blend_argb(orig, tint_color, tint_alpha.saturating_sub(30));
+            // 1px dark outer stroke at right edge
+            if px + 1 == x_end {
+                col = 0x000F172A;
+            }
+            // 1px inner white chamfer at right
+            if px + 2 == x_end {
+                col = blend_argb(col, 0x00FFFFFF, 80);
+            }
+            *row_ptr.add(px) = col;
+        }
+    }
+
+    // === BOTTOM BORDER ===
+    let bottom_y = y_end.saturating_sub(border_w);
+    for py in bottom_y..y_end {
+        let row_ptr = fb.add(py * pitch) as *mut u32;
+        let (row_x_start, row_x_end) = if (y_end - py) < 6 {
+            let dy = (6 - (y_end - py)) as isize;
+            let dx_in = isqrt((r_sq - dy * dy).max(0) as usize);
+            (x + 6 - dx_in, x + w - 6 + dx_in)
+        } else {
+            (x, x + w)
+        };
+        let span_start = row_x_start.max(x).min(scr_w);
+        let span_end = row_x_end.min(x_end);
+        for px in span_start..span_end {
+            let orig = *row_ptr.add(px);
+            let mut col = blend_argb(orig, tint_color, tint_alpha.saturating_sub(30));
+            // 1px dark outer stroke at bottom
+            if py + 1 == y_end {
+                col = 0x000F172A;
+            }
+            // 1px inner white chamfer at bottom
+            if py + 2 == y_end {
+                col = blend_argb(col, 0x00FFFFFF, 80);
+            }
+            *row_ptr.add(px) = col;
+        }
+    }
+
+    // === TOP-LEFT / TOP-RIGHT corner fix for rounded corners (1px dark stroke) ===
+    for py in y..(y + 6).min(y_end) {
+        let row_ptr = fb.add(py * pitch) as *mut u32;
+        let dy = (py as isize - y as isize).abs();
+        let dx_in = if dy < 6 { isqrt((r_sq - dy * dy).max(0) as usize) } else { 0 };
+        let left_x = (x + 6).saturating_sub(dx_in);
+        let right_x = (x + w).saturating_sub(6 + dx_in);
+        if left_x < scr_w { *row_ptr.add(left_x) = 0x000F172A; }
+        if right_x < scr_w { *row_ptr.add(right_x) = 0x000F172A; }
     }
 }
 

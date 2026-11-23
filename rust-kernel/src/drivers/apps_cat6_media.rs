@@ -55,10 +55,10 @@ pub const THEME_PALETTE: [ThemePaletteItem; 8] = [
 
 pub static GLOBAL_THEME: SpinLock<GlassThemeSettings> = SpinLock::new(GlassThemeSettings {
     theme_index: 0,
-    frame_active_color: 0x00163254,
-    frame_inactive_color: 0x003C4B5C,
+    frame_active_color: 0x001E3A5F,
+    frame_inactive_color: 0x001E293B,  // BG_SURFACE - visível, não preto
     accent_color: 0x0038BDF8,
-    glass_opacity: 150,
+    glass_opacity: 100,  // reduzido para menos escurecimento
     wallpaper_preset: 0,
     theme_name: "Azul Safira Padrao",
 });
