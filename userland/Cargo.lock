@@ -3,91 +3,105 @@
 version = 4
 
 [[package]]
-name = "cmd-compat"
+name = "dig"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "curl"
+name = "hyb-bt"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-archive"
+name = "hyb-bundle"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-cron"
+name = "hyb-dns"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-cronctl"
+name = "hyb-hosts"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-grep"
+name = "hyb-ip"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-hash"
+name = "hyb-lan-scan"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-linux"
+name = "hyb-mac"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-pipe"
+name = "hyb-mount-net"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-pkg"
+name = "hyb-mtr"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-runner"
+name = "hyb-net-adapters"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-sandbox"
+name = "hyb-netctl"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-script-studio"
+name = "hyb-ports"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-proxy"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-route"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -101,28 +115,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "hyb-ssh-agent"
+name = "hyb-shares"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-sync"
+name = "hyb-tcp-test"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-term"
-version = "0.1.0"
-dependencies = [
- "libhybrid_sys",
-]
-
-[[package]]
-name = "hyb-vm"
+name = "ip"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -133,28 +140,14 @@ name = "libhybrid_sys"
 version = "0.1.0"
 
 [[package]]
-name = "scp"
+name = "ping"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "ssh"
-version = "0.1.0"
-dependencies = [
- "libhybrid_sys",
-]
-
-[[package]]
-name = "ssh-keygen"
-version = "0.1.0"
-dependencies = [
- "libhybrid_sys",
-]
-
-[[package]]
-name = "which"
+name = "traceroute"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
