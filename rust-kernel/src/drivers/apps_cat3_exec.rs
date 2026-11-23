@@ -897,10 +897,10 @@ unsafe fn render_terminal_trishell(
     let clear_x = (cx + cw).saturating_sub(75);
     draw_glass_button(fb, pitch, scr_w, scr_h, clear_x, chip_y, 65, 24, "Limpar", false);
 
-    // 2. Terminal Screen Area (Deep Crystal Midnight Navy)
+    // 2. Terminal Screen Area (Dark Slate - visible dark background)
     let term_y = cy + 36;
     let term_h = ch.saturating_sub(36 + 32 + 22);
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx, term_y, cw, term_h, 0, 0x000A1128);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx, term_y, cw, term_h, 0, 0x001E293B);
 
     // Display Primary Terminal Buffer Lines directly from desk.term_lines
     let max_lines = (term_h / 18).max(1);
@@ -936,9 +936,7 @@ unsafe fn render_terminal_trishell(
 
     // 3. Command Input Bar (32px)
     let input_y = term_y + term_h;
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx, input_y, cw, 32, 0, 0x000F172A);
-
-    let (prompt_str, prompt_col) = match state.shell_mode {
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx, input_y, cw, 32, 0, 0x001E293B);    let (prompt_str, prompt_col) = match state.shell_mode {
         ShellMode::Bash => ("user@hybridos:~$ ", 0x004ADE80),
         ShellMode::Cmd => ("C:\\Users\\Default> ", 0x00F8FAFC),
         ShellMode::PowerShell => ("PS C:\\> ", 0x0038BDF8),
