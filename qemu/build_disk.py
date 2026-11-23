@@ -190,12 +190,26 @@ def create_images(out_dir):
         b"    kernel_path: boot():/hybridos-kernel\n"
     )
 
+    # Adicionar .exe de teste para instalação externa
+    hello_exe_path = os.path.join(project_root, "hello_test.exe")
+    hello_exe_data = b""
+    if os.path.exists(hello_exe_path):
+        with open(hello_exe_path, "rb") as f:
+            hello_exe_data = f.read()
+        print(f"[+] Loaded hello_test.exe: {hello_exe_path} ({len(hello_exe_data)} bytes)")
+    else:
+        print(f"[!] hello_test.exe not found at {hello_exe_path} - run scripts\\make_hello_exe.py first")
+
     files_to_install = [
         ('limine-bios.sys', 'LIMINE-BSYS', bios_sys_data),
         ('limine.conf',     'LIMINE  CNF', limine_conf_data),
         ('hybridos-kernel', 'HYBRID~1   ', kernel_data),
         ('BOOTX64.EFI',     'BOOTX64 EFI', bootx64_data),
     ]
+    if hello_exe_data:
+        files_to_insert = list(files_to_install)
+        files_to_insert.append(('hello.exe', 'HELLO   EXE', hello_exe_data))
+        files_to_install = files_to_insert
 
     # 1. Build Bootable System Disk (64 MB)
     system_img_path = os.path.join(out_dir, "hybridos_system.img")
