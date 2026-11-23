@@ -1,14 +1,13 @@
 //! hyb-settings: Central Unificada de Configurações (Super + I).
-//! Interface dos módulos de configuração 1 a 10 do Hybridos OS.
-//! no_std, alvo x86_64-unknown-none (Ring 3). Lê /etc/hybridos/system.toml.
+//! Interface dos módulos de configuração 6 a 10 do Hybridos OS.
+//! Lê /etc/hybridos/system.toml e exibe os parâmetros dos módulos 6-10.
 
 #![no_std]
 #![no_main]
 
-extern crate alloc;
-
+use core::panic::PanicInfo;
 use libhybrid_sys::allocator::HybridUserAllocator;
-use libhybrid_sys::{println};
+use libhybrid_sys::{print, println};
 use libhybrid_sys::linux::{sys_open, sys_read, sys_write, sys_close, sys_exit};
 
 use alloc::string::String;
@@ -17,6 +16,12 @@ use alloc::format;
 
 #[global_allocator]
 static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
+
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    println!("[hyb-settings] erro interno inesperado");
+    sys_exit(1);
+}
 
 const CONFIG_PATHS: [&str; 2] = ["etc/hybridos/system.toml", "/etc/hybridos/system.toml"];
 const ARGS_PATHS: [&str; 2] = ["etc/hybridos/hybctl.args", "/etc/hybridos/hybctl.args"];
@@ -84,7 +89,7 @@ fn load_doc() -> Option<TomlDoc> {
                 if let Some(eq) = line.find('=') {
                     let key = trim(&line[..eq]); let val = parse_value(&line[eq+1..]);
                     if key.is_empty() { continue; }
-                    match &cur { Some(s) => doc.set(s, key, val), None => doc.set("__root__", key, val), }
+                    match &cur { Some(s) => doc.set(s, key, val), None => doc.set("__root__", key, val); }
                 }
             }
             return Some(doc);
@@ -118,45 +123,6 @@ fn write_file(path: &str, contents: &str) -> bool {
 
 struct Modulo { numero: usize, nome: &'static str, descricao: &'static str,
     parametros: &'static [(&'static str, &'static str)] }
-
-const MODULOS_1_5: [Modulo; 5] = [
-    Modulo { numero: 1, nome: "Compositor de Vídeo", descricao: "Compositor de vídeo, monitores e pipeline gráfico",
-        parametros: &[
-            ("display.refresh_rate","Taxa de atualização do display"),("display.scaling","Escala de exibição"),
-            ("display.multi_monitor","Suporte a múltiplos monitores"),("graphics.scheduler_hags","Agendador HAGS de gráficos"),
-            ("graphics.direct_scanout","Direct scanout"),("graphics.gpu_preference","Preferência de GPU"),
-            ("display.night_light","Luz noturna"),("display.hdr_pipeline","Pipeline HDR"),
-            ("display.disable_cabc","Desabilitar CABC"),("graphics.tdr_recovery","Recuperação TDR"),
-            ("graphics.legacy_dpi_fix","Correção DPI legado"),("graphics.frame_limiter_global","Limite de FPS global")] },
-    Modulo { numero: 2, nome: "Áudio", descricao: "Subsistema de áudio pro-audio e gamer",
-        parametros: &[
-            ("audio.devices_profile","Perfil de dispositivos de áudio"),("audio.bit_perfect","Áudio bit-perfeito"),
-            ("audio.quantum_buffer","Buffer quântico de áudio"),("audio.lock_mic_gain","Travar ganho do microfone"),
-            ("audio.ducking","Ducking de áudio"),("audio.rnnoise_filter","Filtro RNNoise"),
-            ("audio.per_app_routing","Roteamento por aplicativo"),("audio.system_sounds","Sons do sistema")] },
-    Modulo { numero: 3, nome: "Input", descricao: "Input de latência zero: mouse, teclado e periféricos",
-        parametros: &[
-            ("input.mouse.raw_input","Input cru do mouse"),("input.mouse.polling_rate_support","Taxa de polling do mouse"),
-            ("input.mouse.scroll_inactive","Scroll em janelas inativas"),("input.mouse.middle_click_paste","Colar com clique do meio"),
-            ("input.keyboard.repeat_rate","Taxa de repetição do teclado"),("input.keyboard.no_sticky_keys","Sem teclas fixas"),
-            ("input.keyboard.remap_caps","Remapear Caps Lock"),("input.keyboard.clean_layout","Layout limpo do teclado"),
-            ("input.touchpad.gestures","Gestos do touchpad"),("input.usb.no_autosuspend","Sem autosuspend USB")] },
-    Modulo { numero: 4, nome: "Energia", descricao: "Gerenciamento de energia, escalonador de CPU e térmicas",
-        parametros: &[
-            ("power.profile","Perfil de energia"),("power.pcie_aspm","PCIe ASPM"),
-            ("power.cpu_scheduler","Escalonador de CPU"),("power.boost_control","Controle de boost"),
-            ("power.clean_shutdown","Desligamento limpo"),("power.hibernation","Hibernação"),
-            ("power.battery_charge_limit","Limite de carga da bateria"),("power.disk_spindown","Parada de disco")] },
-    Modulo { numero: 5, nome: "Shell / Explorador", descricao: "Shell gráfico, janelas e explorador de arquivos",
-        parametros: &[
-            ("files.show_extensions","Mostrar extensões de arquivo"),("files.show_dotfiles","Mostrar arquivos ocultos"),
-            ("files.default_view","Visualização padrão"),("files.zero_ads","Zero anúncios"),
-            ("files.header_path","Caminho no cabeçalho"),("shell.context_menu","Menu de contexto clássico"),
-            ("shell.taskbar_clean","Taskbar limpa"),("shell.panel_position","Posição do painel"),
-            ("shell.force_kill_shortcut","Atalho de forçar encerramento"),("shell.launcher","Iniciador"),
-            ("shell.window_tiling","Tiling de janelas"),("shell.virtual_desktops","Áreas de trabalho virtuais"),
-            ("shell.compositor_effects","Efeitos do compositor"),("shell.tray_telemetry","Telemetria da bandeja")] },
-];
 
 const MODULOS_6_10: [Modulo; 5] = [
     Modulo { numero: 6, nome: "Dev / FS / Memória", descricao: "Ambiente de desenvolvimento, sistema de arquivos e memória",
@@ -199,11 +165,11 @@ const MODULOS_6_10: [Modulo; 5] = [
 
 fn mostrar_modulos() {
     println!("================================================================");
-    println!("  Hyb-Settings — Módulos de Configuração 1 a 10 (Hybridos OS)");
+    println!("  Hyb-Settings — Módulos de Configuração 6 a 10 (Hybridos OS)");
     println!("================================================================");
     println!("Valores lidos de /etc/hybridos/system.toml");
     let doc = match load_doc() { Some(d) => d, None => { println!("[hyb-settings] não foi possível carregar /etc/hybridos/system.toml"); return; } };
-    for m in MODULOS_1_5.iter().chain(MODULOS_6_10.iter()) {
+    for m in MODULOS_6_10.iter() {
         println!("\n[ Módulo {} — {} ]\n    {}", m.numero, m.nome, m.descricao);
         for (chave, _rot) in m.parametros.iter() {
             let Some((sec, k)) = split_key(chave) else { println!("    {:<45} = <inválido>", chave); continue; };
@@ -230,17 +196,17 @@ fn cmd_set(key: &str, value_raw: &str) {
     let Some((sec, k)) = split_key(key) else { println!("[hyb-settings] formato inválido (use secao.chave): {}", key); return; };
     let val = parse_value(value_raw);
     let mut doc = match load_doc() { Some(d) => d, None => TomlDoc::new() };
-    doc.set(sec, k, val.clone());
+    doc.set(sec, k, val);
     let mut out = String::from("# /etc/hybridos/system.toml — Configuração Base do Hybridos OS\n# Atualizado via `hyb-settings`.\n\n");
     for s in &doc.sections { out.push_str(&format!("[{}]\n", s)); for e in doc.entries.iter() { if e.section == *s { out.push_str(&format!("{} = {}\n", e.key, format_value(&e.value))); } } out.push('\n'); }
     if write_file(CONFIG_PATHS[0], &out) { println!("{} = {} (gravado)", key, format_value(&val)); }
     else { println!("[hyb-settings] falha ao gravar {}", CONFIG_PATHS[0]); }
 }
 fn cmd_help() {
-    println!("hyb-settings — Central Unificada de Configurações (módulos 1-10)");
-    println!("Sem argumento: exibe módulos 1 a 10 com valores atuais.");
+    println!("hyb-settings — Central Unificada de Configurações (módulos 6-10)");
+    println!("Sem argumento: exibe módulos 6 a 10 com valores atuais.");
     println!("Comandos: list | get <secao.chave> | set <secao.chave> <v> | help");
-    println!("Exemplos: hyb-settings get display.refresh_rate   hyb-settings set input.mouse.raw_input true");
+    println!("Exemplos: hyb-settings get privacy.zero_telemetry   hyb-settings set gaming.kernel_boost true");
 }
 
 #[no_mangle]

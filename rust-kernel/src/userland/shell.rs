@@ -63,6 +63,7 @@ pub enum ShellError {
     VfsError(String),
     BinaryExecutionError(String),
     IoError(String),
+    DownloadError(String),
 }
 
 impl fmt::Display for ShellError {
@@ -77,11 +78,11 @@ impl fmt::Display for ShellError {
             Self::VfsError(err) => write!(f, "vfs error: {}", err),
             Self::BinaryExecutionError(err) => write!(f, "binary execution error: {}", err),
             Self::IoError(err) => write!(f, "i/o error: {}", err),
+            Self::DownloadError(err) => write!(f, "download error: {}", err),
         }
     }
-}
 
-impl std::error::Error for ShellError {}
+    impl std::error::Error for ShellError {}
 
 impl From<VfsError> for ShellError {
     fn from(err: VfsError) -> Self {
@@ -783,6 +784,23 @@ impl HybridShell {
                     }
                 }
             }
+            "download" => {
+                if args.len() < 2 {
+                    self.last_exit_code = 1;
+                    "download: Baixa um arquivo via HTTP e salva no VFS\nSyntax: download <url> <destino>\nExemplo: download http://exemplo.com/programa.exe /Program Files/programa.exe".to_string()
+                } else {
+                    match self.cmd_download(&args[0], &args[1]) {
+                        Ok(out) => {
+                            self.last_exit_code = 0;
+                            out
+                        }
+                        Err(e) => {
+                            self.last_exit_code = 1;
+                            format!("download error: {}", e)
+                        }
+                    }
+                }
+            }
             "personality" | "subsystem" | "mode" => {
                 let target = args.first().map(|s| s.as_str());
                 self.cmd_personality(target)
@@ -1368,6 +1386,70 @@ impl HybridShell {
 
         out.push_str("================================================================================\n");
         Ok(out)
+    }
+
+    /// Command `download`: Baixa um arquivo de uma URL via HTTP e salva no VFS.
+    pub fn cmd_download(&mut self, url: &str, dest_path: &str) -> Result<String, ShellError> {
+        use crate::net::smoltcp_bridge::perform_curl;
+
+        crate::serial_println!("[DOWNLOAD] Downloading: {}", url);
+        out.push_str(&format!("[DOWNLOAD] URL: {}\n", url));
+        out.push_str(&format!("[DOWNLOAD] Destino: {}\n", dest_path));
+
+        // Parse da URL para extrair host, porta e caminho
+        let url_str = url.to_string();
+        let (host, port, path) = parse_url(&url_str)?;
+
+        crate::serial_println!("[DOWNLOAD] Connecting to {}:{}...", host, port);
+
+        // Baixa o conteúdo via HTTP GET
+        let content = perform_curl(&host, port, &path)
+            .map_err(|e| ShellError::DownloadError(format!("Failed to download: {}", e)))?;
+
+        crate::serial_println!("[DOWNLOAD] Downloaded {} bytes", content.len());
+
+        // Salva no VFS
+        vfs::vfs_create_file(dest_path, content.as_bytes())
+            .map_err(|e| ShellError::DownloadError(format!("Failed to save to VFS: {:?}", e)))?;
+
+        crate::serial_println!("[DOWNLOAD] Saved successfully em: {}", dest_path);
+
+        let mut out = String::new();
+        out.push_str("================================================================================\n");
+        out.push_str("                      HYBRIDOS DOWNLOAD MANAGER                            \n");
+        out.push_str("================================================================================\n");
+        out.push_str(&format!("[URL] {}\n", url));
+        out.push_str(&format!("[Destino] {}\n", dest_path));
+        out.push_str(&format!("[Tamanho] {} bytes\n", content.len()));
+        out.push_str(&format!("[Status] Download concluído com sucesso\n"));
+        out.push_str(&format!("\nPara executar: run {}\n", dest_path));
+
+        Ok(out)
+    }
+
+    /// Parser simples de URL HTTP para extrair host, porta e caminho.
+    /// Suporta formatos: http://host:port/path e http://host/path
+    fn parse_url(url: &str) -> Result<(String, u16, String), ShellError> {
+        let url = url.trim();
+        let url_no_scheme = url.strip_prefix("http://").unwrap_or(url);
+        let url_no_scheme = url_no_scheme.strip_prefix("https://").unwrap_or(url_no_scheme);
+
+        let (host_port, path) = match url_no_scheme.find('/') {
+            Some(pos) => (&url_no_scheme[..pos], &url_no_scheme[pos..]),
+            None => (url_no_scheme, "/"),
+        };
+
+        let (host, port) = match host_port.find(':') {
+            Some(pos) => {
+                let host = &host_port[..pos];
+                let port: u16 = host_port[pos + 1..].parse()
+                    .map_err(|_| ShellError::DownloadError("Porta inválida na URL".to_string()))?;
+                (host.to_string(), port)
+            }
+            None => (host_port.to_string(), 80),
+        };
+
+        Ok((host, port, path.to_string()))
     }
 
     /// Command `personality`: Switches or inspects the active environment mode.
@@ -2475,7 +2557,7 @@ mod tests {
 
         // 1. 'ver'
         let ver = shell.execute("ver");
-        assert!(ver.contains("Windows [Version 10.0.22631"));
+        assert!(ver.contains("Windows [Version 10.0.22631]"));
         assert!(ver.contains("Linux version 6.12.0"));
 
         // 2. 'whoami'

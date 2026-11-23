@@ -1,7 +1,12 @@
 [package]
 name = "hybctl"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
+description = "Controlador Central de Configuracao do Sistema Hybridos OS (hybctl)"
 
-[dependencies]
-libhybrid_sys = { path = "../../libhybrid_sys" }
+[[bin]]
+name = "hybctl"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3

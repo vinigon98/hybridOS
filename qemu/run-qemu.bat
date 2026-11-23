@@ -23,8 +23,8 @@ if not exist "%QEMU_BIN%" (
     -m 2048M ^
     -smp 4 ^
     -vga std ^
-    -device virtio-gpu-pci ^
-    -serial stdio ^
+    -display gtk ^
+    -serial file:hybrid_serial.log ^
     -device ahci,id=ahci0 ^
     -drive file=hybridos_system.img,format=raw,if=none,id=bootdisk ^
     -device ide-hd,drive=bootdisk,bus=ahci0.0,bootindex=1 ^

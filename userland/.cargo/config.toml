@@ -1,10 +1,3 @@
-[target.x86_64-pc-windows-msvc]
-linker = "C:\\Users\\Vinicius\\Documents\\HybridOS-Kernel\\userland\\tools\\link.cmd"
-rustflags = [
-    "-C", "panic=abort",
-    "-C", "link-arg=/NODEFAULTLIB",
-]
-
 [target.x86_64-unknown-none]
 linker = "C:\\Users\\Vinicius\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\lib\\rustlib\\x86_64-pc-windows-msvc\\bin\\rust-lld.exe"
 rustflags = [
