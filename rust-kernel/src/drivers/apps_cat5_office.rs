@@ -1822,7 +1822,7 @@ unsafe fn render_calculator(
     // 2. Vitrified Display Screen with Calculation History
     let disp_y = cy + 34;
     let disp_h = if state.calc.mode == 2 { 90 } else { 64 };
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx + 12, disp_y, cw - 24, disp_h, 6, 0x000F172A);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx + 12, disp_y, cw - 24, disp_h, 6, 0x001E293B);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, cx + 12, disp_y, cw - 24, disp_h, 6, 0x0038BDF8);
 
     if state.calc.mode == 2 {
@@ -2326,7 +2326,7 @@ unsafe fn render_calendar_clock(
         let rad = (h as f32) * (core::f32::consts::PI / 6.0);
         let tx = center_x as f32 + (radius as f32 - 8.0) * rad.sin();
         let ty = center_y as f32 - (radius as f32 - 8.0) * rad.cos();
-        fill_rounded_rect(fb, pitch, scr_w, scr_h, tx as usize - 1, ty as usize - 1, 3, 3, 1, 0x000F172A);
+        fill_rounded_rect(fb, pitch, scr_w, scr_h, tx as usize - 1, ty as usize - 1, 3, 3, 1, 0x0064748B);
     }
 
     // Calculate hand angles
@@ -2387,7 +2387,7 @@ unsafe fn render_calendar_clock(
     let min = (ticks / 6000) % 60;
     let sw_str = format!("{:02}:{:02}.{:02}", min, sec, cs);
 
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, sw_x + 10, cy + 42, sw_w.saturating_sub(20), 46, 6, 0x000F172A);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, sw_x + 10, cy + 42, sw_w.saturating_sub(20), 46, 6, 0x001E293B);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, sw_x + 10, cy + 42, sw_w.saturating_sub(20), 46, 6, 0x0038BDF8);
     draw_text_px(fb, pitch, scr_w, scr_h, sw_x + 24, cy + 56, &sw_str, 0x004ADE80, None);
 
@@ -2523,7 +2523,7 @@ unsafe fn render_charmap(
     // 4x Magnified Glyph Box (32x64 pixels from 8x16 font)
     let box_x = right_x + (right_w.saturating_sub(40)) / 2;
     let box_y = cy + 44;
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, box_x - 4, box_y - 4, 40, 72, 4, 0x000F172A);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, box_x - 4, box_y - 4, 40, 72, 4, 0x001E293B);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, box_x - 4, box_y - 4, 40, 72, 4, 0x0038BDF8);
 
     let sel_ascii = state.charmap.selected_char as usize;

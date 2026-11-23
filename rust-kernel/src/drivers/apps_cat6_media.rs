@@ -545,13 +545,13 @@ unsafe fn render_photo_viewer(
     let vp_x1 = (cx + cw).min(scr_w);
     let vp_y1 = (vp_y + vp_h).min(scr_h);
 
-    fill_rect(fb, pitch, scr_w, scr_h, cx, vp_y, cw, vp_h, 0x000F172A);
+    fill_rect(fb, pitch, scr_w, scr_h, cx, vp_y, cw, vp_h, 0x001E293B);
 
     // Draw subtle 16px checkerboard background
     for ty in (vp_y0..vp_y1).step_by(16) {
         for tx in (vp_x0..vp_x1).step_by(16) {
             if ((tx / 16) + (ty / 16)) % 2 == 1 {
-                fill_rect(fb, pitch, scr_w, scr_h, tx, ty, 16.min(vp_x1 - tx), 16.min(vp_y1 - ty), 0x001E293B);
+                fill_rect(fb, pitch, scr_w, scr_h, tx, ty, 16.min(vp_x1 - tx), 16.min(vp_y1 - ty), 0x00334155);
             }
         }
     }
@@ -1048,6 +1048,9 @@ unsafe fn render_paint_studio(
         state.last_paint_pos = None;
     }
 
+    // Fill canvas area with WHITE (0x00FFFFFF) before blitting to ensure clean background
+    fill_rect(fb, pitch, scr_w, scr_h, canvas_box_x, canvas_box_y, canvas_box_w, canvas_box_h, 0x00FFFFFF);
+
     // Blit internal canvas buffer to GOP Framebuffer
     for py in 0..canvas_box_h {
         let out_y = canvas_box_y + py;
@@ -1288,7 +1291,7 @@ unsafe fn render_snipping_tool(
     // 2. Central Preview Panel (Vitrified Frame with Specular Highlights)
     let body_y = cy + 38;
     let body_h = ch.saturating_sub(38 + 24);
-    fill_rect(fb, pitch, scr_w, scr_h, cx, body_y, cw, body_h, 0x000F172A);
+    fill_rect(fb, pitch, scr_w, scr_h, cx, body_y, cw, body_h, 0x001E293B);
 
     let prev_w = 320usize;
     let prev_h = 200usize;
@@ -1359,7 +1362,7 @@ unsafe fn render_crystal_media_player(
     };
 
     // Dark Vitrified Player Body
-    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 6, 0x000F172A, 0x001E293B);
+    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 6, 0x001E293B, 0x00334155);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 6, 0x0038BDF8);
 
     let track = &MEDIA_TRACKS[state.current_track];
@@ -1375,7 +1378,7 @@ unsafe fn render_crystal_media_player(
     let spec_h = (ch.saturating_sub(180)).max(70);
 
     // Spectrum display dark glass frame
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, spec_x, spec_y, spec_w, spec_h, 4, 0x0009101D);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, spec_x, spec_y, spec_w, spec_h, 4, 0x001E293B);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, spec_x, spec_y, spec_w, spec_h, 4, 0x001E3A8A);
 
     let bar_spacing = (spec_w.saturating_sub(16)) / 16;
@@ -1550,7 +1553,7 @@ unsafe fn render_hda_mixer(
     };
 
     // Dark Glass Panel Background
-    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 6, 0x000F172A, 0x001E293B);
+    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 6, 0x001E293B, 0x00334155);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 6, 0x0038BDF8);
 
     // Header Title
@@ -1582,7 +1585,7 @@ unsafe fn render_hda_mixer(
         // Vertical Track (8px wide)
         let track_x = col_x + channel_w / 2 - 4;
         let track_y = slider_y + 32;
-        fill_rounded_rect(fb, pitch, scr_w, scr_h, track_x, track_y, 8, slider_h, 4, 0x000F172A);
+        fill_rounded_rect(fb, pitch, scr_w, scr_h, track_x, track_y, 8, slider_h, 4, 0x001E293B);
 
         // Liquid filled bar up to current volume
         let fill_h = (*vol_val as usize * slider_h) / 100;
@@ -1646,7 +1649,7 @@ unsafe fn render_hda_mixer(
     let vu_x = cx + 20 + 4 * (channel_w + 14);
     let vu_w = cw.saturating_sub(vu_x - cx + 20);
     if vu_w >= 70 {
-        fill_rounded_rect(fb, pitch, scr_w, scr_h, vu_x, slider_y, vu_w, slider_h + 90, 4, 0x0009101D);
+        fill_rounded_rect(fb, pitch, scr_w, scr_h, vu_x, slider_y, vu_w, slider_h + 90, 4, 0x001E293B);
         draw_rounded_rect_border(fb, pitch, scr_w, scr_h, vu_x, slider_y, vu_w, slider_h + 90, 4, 0x001E3A8A);
 
         draw_text_px(fb, pitch, scr_w, scr_h, vu_x + 10, slider_y + 8, "VU Meter", 0x00F8FAFC, None);
@@ -1720,7 +1723,7 @@ unsafe fn render_personalization_studio(
     };
 
     // Dark Vitrified Background
-    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 6, 0x000F172A, 0x001E293B);
+    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 6, 0x001E293B, 0x00334155);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 6, 0x0038BDF8);
 
     // Section 1: Window Frame Glass Tint (8 Palettes)

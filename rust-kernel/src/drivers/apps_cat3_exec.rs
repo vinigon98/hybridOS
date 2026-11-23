@@ -1518,7 +1518,7 @@ unsafe fn render_setup_wizard(
 
             // Extraction Status Details
             let log_y = body_y + 110;
-            fill_rounded_rect(fb, pitch, scr_w, scr_h, cx + 20, log_y, cw - 40, 100, 3, 0x000A1128);
+            fill_rounded_rect(fb, pitch, scr_w, scr_h, cx + 20, log_y, cw - 40, 100, 3, 0x001E293B);
             draw_text_px(fb, pitch, scr_w, scr_h, cx + 30, log_y + 10, "Status da Operacao:", 0x0038BDF8, None);
             draw_text_clipped(fb, pitch, scr_w, scr_h, cx + 30, log_y + 32, cx + cw - 30, &state.wizard_status, 0x004ADE80, None);
 

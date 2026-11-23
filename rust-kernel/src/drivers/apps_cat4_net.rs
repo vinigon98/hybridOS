@@ -628,7 +628,7 @@ unsafe fn render_network_center(
     // Node 1: Computador Host
     let n1_x = cx + 36;
     let n1_y = body_y + 22;
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, n1_x, n1_y, 110, 64, 6, 0x000F172A);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, n1_x, n1_y, 110, 64, 6, 0x001E293B);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, n1_x, n1_y, 110, 64, 6, 0x0038BDF8);
     draw_text_px(fb, pitch, scr_w, scr_h, n1_x + 12, n1_y + 14, "[Computador]", 0x0038BDF8, None);
     draw_text_px(fb, pitch, scr_w, scr_h, n1_x + 10, n1_y + 36, "hybridos-pc", 0x00E2E8F0, None);
@@ -640,7 +640,7 @@ unsafe fn render_network_center(
 
     // Node 2: Roteador / Gateway
     let n2_x = n1_x + 114 + (cw / 4).max(40) + 4;
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, n2_x, n1_y, 115, 64, 6, 0x000F172A);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, n2_x, n1_y, 115, 64, 6, 0x001E293B);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, n2_x, n1_y, 115, 64, 6, if link_up { 0x0010B981 } else { 0x00DC2626 });
     draw_text_px(fb, pitch, scr_w, scr_h, n2_x + 16, n1_y + 14, "[Roteador]", 0x0034D399, None);
     draw_text_clipped(fb, pitch, scr_w, scr_h, n2_x + 8, n1_y + 36, n2_x + 110, &gw_str, 0x00E2E8F0, None);
@@ -652,7 +652,7 @@ unsafe fn render_network_center(
 
     // Node 3: Internet
     let n3_x = link2_x + (cw / 4).max(40) + 4;
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, n3_x, n1_y, 110, 64, 6, 0x000F172A);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, n3_x, n1_y, 110, 64, 6, 0x001E293B);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, n3_x, n1_y, 110, 64, 6, if link_up { 0x00F59E0B } else { 0x00DC2626 });
     draw_text_px(fb, pitch, scr_w, scr_h, n3_x + 18, n1_y + 14, "[Internet]", 0x00FBBF24, None);
     draw_text_px(fb, pitch, scr_w, scr_h, n3_x + 12, n1_y + 36, if link_up { "Conectado" } else { "Offline" }, if link_up { 0x004ADE80 } else { 0x00EF4444 }, None);
@@ -1737,7 +1737,7 @@ unsafe fn render_tcp_serial_remote(
         // Terminal Output Screen
         let term_y = body_y + 48;
         let term_h = body_h.saturating_sub(48 + 38);
-        fill_rounded_rect(fb, pitch, scr_w, scr_h, cx + 10, term_y, cw - 20, term_h, 4, 0x000F172A);
+        fill_rounded_rect(fb, pitch, scr_w, scr_h, cx + 10, term_y, cw - 20, term_h, 4, 0x001E293B);
 
         for (idx, line) in state.tcp_term_lines.iter().enumerate() {
             let ty = term_y + 8 + idx * 18;
@@ -2017,7 +2017,7 @@ unsafe fn render_security_integrity(
     // 4. Audit Log Box
     let log_y = scan_y + 54;
     let log_h = body_h.saturating_sub((scan_y - body_y) + 54 + 6);
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx + 14, log_y, cw - 28, log_h, 4, 0x000F172A);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx + 14, log_y, cw - 28, log_h, 4, 0x001E293B);
 
     for (idx, line) in state.sec_scan_log.iter().enumerate() {
         let ly = log_y + 4 + idx * 14;

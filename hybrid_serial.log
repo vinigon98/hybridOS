@@ -22,7 +22,7 @@
        - Index 3: 0x1B -> User Data 64   (Ring 3)
        - Index 4: 0x23 -> User Code 64   (Ring 3)
        - Index 5: 0x28 -> Task State Segment (TSS)
-[PERCPU] Core #0 online: GS_BASE=0xFFFFFFFF80248A00, syscall_rsp0=0xFFFFFFFF8024CA30
+[PERCPU] Core #0 online: GS_BASE=0xFFFFFFFF80649540, syscall_rsp0=0xFFFFFFFF8064D570
 [ARCH] IDT loaded into CPU (LIDT) with 256 vectors:
        - Exception Vectors (#DE, #DB, #NMI, #BP, #UD, #DF, #GP, #PF)
        - Hardware IRQ0 Timer (PIT 100Hz) & IRQ1 Keyboard online
@@ -33,14 +33,14 @@
 [Arch Core] Hardware status: Serial Ready=true, GDT Loaded=true, IDT Loaded=true, TSS Configured=true
 
 >>> [PHASE 2] Initializing Memory Management Subsystem (PML4, Frame Allocator, Kernel Heap)...
-[BOOT] Usable physical RAM: base=0x0000000000100000, size=2036 MB (2135269376 bytes)
+[BOOT] Usable physical RAM: base=0x0000000000100000, size=2036 MB (2135273472 bytes)
 [MM] ================================================================
 [MM] Initializing HybridOS Bare-Metal MMU Subsystem (x86_64 Long Mode)...
 [MM] Limine HHDM Base Offset: 0xFFFF800000000000
 [MM] Physical Frame Allocator online:
-     - Hardware RAM Detected: 2036 MB (2135412736 bytes)
+     - Hardware RAM Detected: 2036 MB (2135416832 bytes)
      - Allocator Bitmap Limit: 16384 MB (4194304 frames)
-     - Usable Free RAM:        2036 MB (521309 frames)
+     - Usable Free RAM:        2036 MB (521310 frames)
 [MM] Allocated new physical Root PML4 frame at: 0x0000000000100000
 [MM] Higher-Half direct mappings copied from initial bootloader CR3.
 [MM] Identity mapped lower 16MB (0x00000000 - 0x01000000).
@@ -57,7 +57,7 @@
 >>> [PHASE 3] Programming x86_64 Hardware MSRs for Dual Syscall Dispatch...
 [MSR] Hardware Registers programmed:
       - IA32_STAR   (0xC0000081): 0x0013000800000000
-      - IA32_LSTAR  (0xC0000082): 0xFFFFFFFF800EC2C0
+      - IA32_LSTAR  (0xC0000082): 0xFFFFFFFF8011F5D4
       - IA32_SFMASK (0xC0000084): 0x0000000000000700
       - IA32_EFER   (0xC0000080): 0x0000000000000D01
 
@@ -110,17 +110,17 @@
   - Task 2: 'hello_win.exe'   (PID 2, CR3=0x000000000114E000, Entry=0x0000000140001000, TEB=0x000000007FFE1000)
 [Linux POSIX PID 1] Step 1/3 in Ring 3 -> Yielding CPU...
 [Scheduler] Preemptive Context Switch: PID 1 (Linux POSIX) -> PID 2 (Windows NT) [CR3=0x000000000114E000, TEB=0x000000007FFE1000]
-      [MSR CONFIG] Before swapgs: GS_BASE=0xFFFFFFFF80248A00, KERNEL_GS_BASE=0x000000007FFE1000
+      [MSR CONFIG] Before swapgs: GS_BASE=0xFFFFFFFF80649540, KERNEL_GS_BASE=0x000000007FFE1000
 [Windows NT PID 2] Step 1/3 in Ring 3 (TEB PID=2 Verified) -> Yielding...
 [Scheduler] Preemptive Context Switch: PID 2 (Windows NT) -> PID 1 (Linux POSIX) [CR3=0x0000000001136000]
 [Linux POSIX PID 1] Step 2/3 in Ring 3 -> Yielding CPU...
 [Scheduler] Preemptive Context Switch: PID 1 (Linux POSIX) -> PID 2 (Windows NT) [CR3=0x000000000114E000, TEB=0x000000007FFE1000]
-      [MSR CONFIG] Before swapgs: GS_BASE=0xFFFFFFFF80248A00, KERNEL_GS_BASE=0x000000007FFE1000
+      [MSR CONFIG] Before swapgs: GS_BASE=0xFFFFFFFF80649540, KERNEL_GS_BASE=0x000000007FFE1000
 [Windows NT PID 2] Step 2/3 in Ring 3 (TEB PID=2 Verified) -> Yielding...
 [Scheduler] Preemptive Context Switch: PID 2 (Windows NT) -> PID 1 (Linux POSIX) [CR3=0x0000000001136000]
 [Linux POSIX PID 1] Step 3/3 in Ring 3 -> Completed execution OK!
 [Scheduler] Preemptive Context Switch: PID 1 terminated -> Switching to active PID 2 (Windows NT) [CR3=0x000000000114E000]
-      [MSR CONFIG] Before swapgs: GS_BASE=0xFFFFFFFF80248A00, KERNEL_GS_BASE=0x000000007FFE1000
+      [MSR CONFIG] Before swapgs: GS_BASE=0xFFFFFFFF80649540, KERNEL_GS_BASE=0x000000007FFE1000
 [Windows NT PID 2] Step 3/3 in Ring 3 (TEB PID=2 Verified) -> Completed OK!
 >>> [RING 3 PROOF COMPLETE] Both Linux ELF64 and Windows PE64 executed concurrently with preemptive multitasking in Ring 3!
 

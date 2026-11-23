@@ -1577,7 +1577,7 @@ unsafe fn draw_wallpaper(fb: *mut u8, pitch: usize, scr_w: usize, scr_h: usize, 
         }
         _ => {
             // Gradiente Aurora (Default Crystal Glass)
-            fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, 0, 0, scr_w, wall_h, 0, 0x000F172A, 0x001E3A5F);
+            fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, 0, 0, scr_w, wall_h, 0, 0x001E293B, 0x001E3A5F);
         }
     }
 }

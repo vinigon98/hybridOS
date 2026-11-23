@@ -1065,7 +1065,7 @@ unsafe fn render_minesweeper_view(
     let header_y = cy + 8;
     let header_w = 320usize.min(cw.saturating_sub(16));
     let header_x = cx + (cw.saturating_sub(header_w)) / 2;
-    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, header_x, header_y, header_w, 42, 6, 0x001E293B, 0x000F172A);
+    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, header_x, header_y, header_w, 42, 6, 0x001E293B, 0x00334155);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, header_x, header_y, header_w, 42, 6, 0x0038BDF8);
 
     // Mines remaining digital LED
@@ -1128,7 +1128,7 @@ unsafe fn render_minesweeper_view(
                             4 => ("4", 0x001E1B4B), // Dark Blue
                             5 => ("5", 0x007F1D1D), // Maroon
                             6 => ("6", 0x000F766E), // Teal
-                            7 => ("7", 0x00111827), // Black
+                            7 => ("7", 0x00374151), // Dark Gray
                             _ => ("8", 0x00475569), // Gray
                         };
                         draw_text_px(fb, pitch, scr_w, scr_h, cell_x + 8, cell_y + 4, num_str, num_col, None);
@@ -1152,7 +1152,7 @@ unsafe fn render_puzzle_view(
     fb: *mut u8, pitch: usize, scr_w: usize, scr_h: usize,
     cx: usize, cy: usize, cw: usize, ch: usize,
 ) {
-    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 0, 0x000F172A, 0x001E293B);
+    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 0, 0x001E293B, 0x00334155);
 
     let st = CAT7_STATE.lock();
     let pz = &st.puzzle;
@@ -1213,7 +1213,7 @@ unsafe fn render_bench3d_view(
     fb: *mut u8, pitch: usize, scr_w: usize, scr_h: usize,
     cx: usize, cy: usize, cw: usize, ch: usize,
 ) {
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 0, 0x00050B14);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 0, 0x001E293B);
 
     let (ang_x, ang_y, ang_z, wireframe, paused, _speed, mesh_type, fps) = {
         let mut st = CAT7_STATE.lock();
@@ -1253,7 +1253,7 @@ unsafe fn render_bench3d_view(
     let view_y = cy + 42;
     let view_w = cw.saturating_sub(24);
     let view_h = ch.saturating_sub(50);
-    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, view_x, view_y, view_w, view_h, 6, 0x000F172A, 0x00020617);
+    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, view_x, view_y, view_w, view_h, 6, 0x001E293B, 0x00334155);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, view_x, view_y, view_w, view_h, 6, 0x000284C7);
 
     let center_x = view_x + view_w / 2;
@@ -1571,7 +1571,7 @@ unsafe fn render_osk_view(
     cx: usize, cy: usize, cw: usize, ch: usize,
     start_menu_open: bool,
 ) {
-    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 0, 0x000F172A, 0x001E293B);
+    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 0, 0x001E293B, 0x00334155);
 
     let (caps, shift, ctrl, alt, altgr, buf_text) = {
         let st = CAT7_STATE.lock();
@@ -1628,7 +1628,7 @@ unsafe fn render_osk_view(
     let kbd_w = box_w;
     let kbd_h = ch.saturating_sub(input_y + 42 - cy);
 
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, kbd_x, kbd_y, kbd_w, kbd_h, 6, 0x00020617);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, kbd_x, kbd_y, kbd_w, kbd_h, 6, 0x001E293B);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, kbd_x, kbd_y, kbd_w, kbd_h, 6, 0x00334155);
 
     // 5 Rows of Keys
@@ -1750,7 +1750,7 @@ unsafe fn render_magnifier_view(
     }
 
     // Now draw background and toolbar chrome
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 0, 0x000F172A);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 0, 0x001E293B);
 
     let bar_y = cy + 8;
     draw_glass_button(fb, pitch, scr_w, scr_h, cx + 12, bar_y, 75, 26, "Zoom 2x", zoom == 2);
@@ -1765,7 +1765,7 @@ unsafe fn render_magnifier_view(
     let grid_str = if show_grid { "Grade: ON" } else { "Grade: OFF" };
     draw_glass_button(fb, pitch, scr_w, scr_h, cx + 448, bar_y, 90, 26, grid_str, show_grid);
 
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, view_x, view_y, view_w, view_h, 4, 0x00000000);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, view_x, view_y, view_w, view_h, 4, 0x001E293B);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, view_x, view_y, view_w, view_h, 4, 0x0038BDF8);
 
     let mut center_pixel_col = 0x00000000;
@@ -1838,7 +1838,7 @@ unsafe fn render_high_contrast_view(
     fb: *mut u8, pitch: usize, scr_w: usize, scr_h: usize,
     cx: usize, cy: usize, cw: usize, ch: usize,
 ) {
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 0, 0x00000000);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 0, 0x000D1117);
     draw_text_px(fb, pitch, scr_w, scr_h, cx + 20, cy + 20, "Recursos de Acessibilidade & Alto Contraste", 0x0038BDF8, None);
 
     let (hc_options, hc_status_msg) = {
@@ -2311,7 +2311,7 @@ unsafe fn render_trishell_manual_view(
     // Detail & Code Cards Pane
     let card_y = table_y + table_h + 10;
     let card_h = ch.saturating_sub(card_y - cy + 6);
-    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx + 12, card_y, table_w, card_h, 6, 0x000F172A, 0x001E293B);
+    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx + 12, card_y, table_w, card_h, 6, 0x001E293B, 0x00334155);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, cx + 12, card_y, table_w, card_h, 6, 0x0038BDF8);
 
     let sel_cmd = TRI_SHELL_COMMANDS.get(selected_idx).unwrap_or(&TRI_SHELL_COMMANDS[0]);
@@ -2356,7 +2356,7 @@ unsafe fn render_system_restore_view(
     fb: *mut u8, pitch: usize, scr_w: usize, scr_h: usize,
     cx: usize, cy: usize, cw: usize, ch: usize,
 ) {
-    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 0, 0x000F172A, 0x001E293B);
+    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx, cy, cw, ch, 0, 0x001E293B, 0x00334155);
 
     let (points_data, sel_idx, status_msg, pct) = {
         let st = CAT7_STATE.lock();
@@ -2411,7 +2411,7 @@ unsafe fn render_system_restore_view(
     // Status Banner & Progress Bar Card
     let card_y = table_y + table_h + 14;
     let card_h = ch.saturating_sub(card_y - cy + 6);
-    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx + 12, card_y, table_w, card_h, 6, 0x00020617, 0x000F172A);
+    fill_rounded_rect_gradient(fb, pitch, scr_w, scr_h, cx + 12, card_y, table_w, card_h, 6, 0x001E293B, 0x00334155);
     draw_rounded_rect_border(fb, pitch, scr_w, scr_h, cx + 12, card_y, table_w, card_h, 6, 0x000284C7);
 
     draw_text_px(fb, pitch, scr_w, scr_h, cx + 24, card_y + 12, "Status da Integridade do VFS e Snapshot:", 0x0038BDF8, None);

@@ -518,7 +518,7 @@ unsafe fn render_task_manager(
 
     if adm.task_tab == 1 {
         // Tab 1: Desempenho (Performance Overview)
-        fill_rounded_rect(fb, pitch, scr_w, scr_h, cx, body_y, cw, body_h, 0, 0x000F172A);
+        fill_rounded_rect(fb, pitch, scr_w, scr_h, cx, body_y, cw, body_h, 0, 0x001E293B);
 
         let sched_info = sched::get_scheduler().lock().ok();
         let (ticks, switches, ready_count) = if let Some(ref s) = sched_info {
@@ -724,7 +724,7 @@ unsafe fn render_resource_monitor(
 
     let body_y = cy + 34;
     let body_h = ch.saturating_sub(34 + 24);
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx, body_y, cw, body_h, 0, 0x000F172A);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, cx, body_y, cw, body_h, 0, 0x001E293B);
 
     let graph_h = (body_h.saturating_sub(32)) / 4;
     let head = adm.history_head;

@@ -1,0 +1,17 @@
+[package]
+name = "hyb-update"
+version = "1.0.0"
+edition = "2021"
+description = "HybridOS System Updater - Windows Update style system updater"
+authors = ["HybridOS Team"]
+
+[[bin]]
+name = "hyb-update"
+path = "src/main.rs"
+
+[dependencies]
+libhybrid_sys = { path = "../../libhybrid_sys" }
+
+[profile.release]
+opt-level = 3
+panic = "abort"

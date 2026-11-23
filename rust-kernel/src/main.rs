@@ -54,6 +54,7 @@ pub mod loaders;
 pub mod net;
 pub mod security;
 pub mod userland;
+pub mod updater;
 
 use arch::msr;
 use personality::ExecutionPersonality;
@@ -215,6 +216,21 @@ pub extern "C" fn _start() -> ! {
     let vfs = vfs::get_vfs();
     storage::init_and_mount_primary_storage(vfs);
     crate::serial_println!("[VFS] Unified namespace mounted: / (Linux) and C:\\ (Windows NT).");
+
+    // 10.5. HybridOS Update System - Check for pending updates & restore points
+    crate::serial_println!("\n>>> [PHASE 7.5] HybridOS Update System Check...");
+    updater::init();
+    if updater::is_update_pending() {
+        crate::serial_println!("[UPDATE] Pending update detected! Will apply on boot.");
+        if updater::apply_pending_update() {
+            crate::serial_println!("[UPDATE] Update applied successfully.");
+        } else {
+            crate::serial_println!("[UPDATE] Update failed, attempting rollback...");
+            updater::rollback();
+        }
+    } else {
+        crate::serial_println!("[UPDATE] No pending updates. System clean.");
+    }
 
     // 10. Scheduler and Baseline Processes
     crate::serial_println!("\n>>> [PHASE 8] Initializing Preemptive Scheduler & Process Manager...");

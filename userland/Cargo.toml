@@ -112,6 +112,9 @@ members = [
     "apps/ip",
     "apps/ping",
     "apps/traceroute",
+    # System Updater (Windows Update style)
+    "apps/hyb-update",
+    "apps/hyb-settings",
 ]
 resolver = "2"
 
