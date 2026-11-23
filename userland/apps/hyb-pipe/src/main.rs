@@ -13,3 +13,4 @@ fn run() {
     let _ = sys_close(dfd as usize); put("clipboard gravado: "); put_u64(total); putln(" bytes"); putln("hyb-pipe: redirecionamento concluido.");
 }
 #[no_mangle] pub extern "C" fn _start() -> ! { run(); sys_exit(0); }
+

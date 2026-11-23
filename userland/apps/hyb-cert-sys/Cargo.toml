@@ -3,9 +3,12 @@ name = "hyb-cert-sys"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "hyb-cert-sys"
-path = "src/main.rs"
-
+[profile.release]
+opt-level = 3
+panic = "abort"
 [dependencies]
 libhybrid_sys = { path = "../../libhybrid_sys" }
+
+
+
+

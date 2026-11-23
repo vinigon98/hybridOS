@@ -1,124 +1,71 @@
-//! hyb-capture: Motor de Captura e OCR Local (Ring 3 ELF64)
-//! Captura de regiao, gravacao MP4/MKV simulada (cabecalho ftyp real) e OCR offline de imagens.
+//! hyb-capture: Captura de tela.
 
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
+extern crate alloc;
+
+use alloc::vec::Vec;
 use libhybrid_sys::allocator::HybridUserAllocator;
-use libhybrid_sys::linux::*;
-use libhybrid_sys::{print, println};
+use libhybrid_sys::{println};
+use libhybrid_sys::linux::sys_exit;
 
 #[global_allocator]
 static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
 
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("[hyb-capture CRASH] {:?}", info);
-    sys_exit(1);
-}
-
-const W: usize = 80;
-const H: usize = 24;
-type Frame = [[u8; W]; H];
-
-// Captura real de uma regiao do buffer do compositor (simulada)
-fn capturar_regiao(frame: &Frame, x0: usize, y0: usize, x1: usize, y1: usize, out: &mut Frame) {
-    let mut y = 0;
-    while y < H {
-        let mut x = 0;
-        while x < W {
-            out[y][x] = 0;
-            x += 1;
-        }
-        y += 1;
-    }
-    let mut dy = 0;
-    let mut y = y0;
-    while y < y1.min(H) {
-        let mut dx = 0;
-        let mut x = x0;
-        while x < x1.min(W) {
-            out[dy][dx] = frame[y][x];
-            dx += 1;
-            x += 1;
-        }
-        dy += 1;
-        y += 1;
-    }
-}
-
-// OCR local simplificado: varre o frame ASCII e extrai sequencias alfanumericas
-fn ocr_extrair_texto(frame: &Frame) -> usize {
-    let mut total = 0usize;
-    let mut y = 0;
-    while y < H {
-        let mut x = 0;
-        while x < W {
-            let c = frame[y][x];
-            if (c >= b'A' && c <= b'Z') || (c >= b'a' && c <= b'z') || (c >= b'0' && c <= b'9') {
-                print!("{}", c as char);
-                total += 1;
-            } else if c != 0 {
-                print!(" ");
-            }
-            x += 1;
-        }
-        print!("\n");
-        y += 1;
-    }
-    total
-}
-
-// Cabecalho MP4/MKV simulado (ftyp box real do ISO BMFF)
-fn escrever_cabecalho_mp4(buf: &mut [u8]) -> usize {
-    let mut w = 0usize;
-    if w + 8 <= buf.len() {
-        buf[w] = 0x00; w += 1;
-        buf[w] = 0x00; w += 1;
-        buf[w] = 0x00; w += 1;
-        buf[w] = 0x20; w += 1; // size = 32
-        buf[w] = b'f'; w += 1;
-        buf[w] = b't'; w += 1;
-        buf[w] = b'y'; w += 1;
-        buf[w] = b'p'; w += 1;
-        buf[w] = b'i'; w += 1;
-        buf[w] = b's'; w += 1;
-        buf[w] = b'o'; w += 1;
-        buf[w] = b'm'; w += 1;
-        buf[w] = 0; w += 1; // minor version
-        buf[w] = 0; w += 1;
-        buf[w] = 0; w += 1;
-        buf[w] = 0; w += 1;
-    }
-    w
-}
-
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    println!("========================================================");
-    println!("       hyb-capture - Motor de Captura e OCR Local        ");
-    println!("========================================================");
+    const FB_ADDR: usize = 0xFFFF_A000_0000_0000;
+    const W: usize = 1280;
+    const H: usize = 800;
+    const PITCH: usize = 5120;
 
-    let mut tela = [[0u8; W]; H];
-    let mensagem = b"HybridOS OCR local ativo";
-    let mut y = 10usize;
-    let mut x = 2usize;
-    while x < 2usize + mensagem.len() && x < W {
-        tela[y][x] = mensagem[x - 2];
-        x += 1;
+    println!("=== hyb-capture ===");
+    println!("Framebuffer: {}x{} @ 0x{:X}", W, H, FB_ADDR);
+
+    let mut header = [0u8; 54];
+    header[0] = b'B'; header[1] = b'M';
+    let file_size = 54 + W * H * 3;
+    header[2..6].copy_from_slice(&(file_size as u32).to_le_bytes());
+    header[10] = 54;
+    header[14..18].copy_from_slice(&(40u32).to_le_bytes());
+    header[18..22].copy_from_slice(&(W as u32).to_le_bytes());
+    header[22..26].copy_from_slice(&(H as u32).to_le_bytes());
+    header[26..28].copy_from_slice(&(1u16).to_le_bytes());
+    header[28..30].copy_from_slice(&(24u16).to_le_bytes());
+
+    let mut out = Vec::new();
+    out.extend_from_slice(&header);
+
+    for y in (0..H).rev() {
+        for x in 0..W {
+            let offset = y * PITCH + x * 4;
+            let ptr = (FB_ADDR + offset) as *const u32;
+            let pixel = unsafe { ptr.read_volatile() };
+            let b = (pixel & 0xFF) as u8;
+            let g = ((pixel >> 8) & 0xFF) as u8;
+            let r = ((pixel >> 16) & 0xFF) as u8;
+            out.push(b); out.push(g); out.push(r);
+        }
     }
 
-    let mut recorte = [[0u8; W]; H];
-    capturar_regiao(&tela, 0, 8, W, 14, &mut recorte);
-    println!("[hyb-capture] Regiao capturada (0,8)-(80,14):");
-    let n = ocr_extrair_texto(&recorte);
-    println!("[hyb-capture] OCR extraiu {} caracteres alfanumericos", n);
+    use libhybrid_sys::linux::{sys_open, sys_write, sys_close};
+    const O_WRONLY: u32 = 1;
+    const O_CREAT: u32 = 0x40;
+    const O_TRUNC: u32 = 0x200;
+    let fd = sys_open("/screenshot.bmp", O_WRONLY | O_CREAT | O_TRUNC, 0o644);
+    if fd >= 0 {
+        let mut w = 0usize;
+        while w < out.len() {
+            let n = libhybrid_sys::linux::sys_write(fd as usize, &out[w..]);
+            if n <= 0 { break; }
+            w += n as usize;
+        }
+        sys_close(fd as usize);
+        println!("Salvo: /screenshot.bmp ({} bytes)", out.len());
+    } else {
+        println!("[erro] não foi possível salvar no VFS");
+    }
 
-    let mut cab = [0u8; 64];
-    let tam = escrever_cabecalho_mp4(&mut cab);
-    println!("[hyb-capture] Cabecalho MP4 (ftyp) gravado: {} bytes", tam);
-    println!("[hyb-capture] Capturador finalizado.");
-    sys_sched_yield();
-    sys_exit(0)
+    sys_exit(0);
 }

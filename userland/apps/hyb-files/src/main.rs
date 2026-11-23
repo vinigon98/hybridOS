@@ -1,129 +1,64 @@
-//! hyb-files: Gerenciador de Arquivos I/O Assíncrono (Ring 3 ELF64)
-//! Explorador nativo: listagem, leitura de arquivos via syscalls e checksum FNV-1a.
+//! hyb-files: Listador de arquivos do VFS (análogo ao `ls`).
 
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
+extern crate alloc;
+
+use alloc::string::String;
+use alloc::vec::Vec;
 use libhybrid_sys::allocator::HybridUserAllocator;
-use libhybrid_sys::linux::*;
-use libhybrid_sys::{print, println};
+use libhybrid_sys::{println};
+use libhybrid_sys::linux::{sys_read, sys_close, SYS_READ, SYS_CLOSE, sys_exit};
 
 #[global_allocator]
 static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
 
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("[hyb-files CRASH] {:?}", info);
-    sys_exit(1);
+const O_RDONLY: u32 = 0;
+const O_DIRECTORY: u32 = 0o0200000;
+
+#[inline(always)]
+unsafe fn syscall3(nr: u64, a1: u64, a2: u64, a3: u64) -> isize {
+    let ret: isize;
+    core::arch::asm!("syscall", inlateout("rax") nr => ret, in("rdi") a1, in("rsi") a2, in("rdx") a3, out("rcx") _, out("r11") _, options(nostack, preserves_flags));
+    ret
 }
 
-const BUF_SIZE: usize = 1024;
-
-struct Node {
-    name: [u8; 64],
-    name_len: usize,
-    is_dir: bool,
-    size: usize,
+#[inline(always)]
+unsafe fn syscall1(nr: u64, a1: u64) -> isize {
+    let ret: isize;
+    core::arch::asm!("syscall", inlateout("rax") nr => ret, in("rdi") a1, out("rcx") _, out("r11") _, options(nostack, preserves_flags));
+    ret
 }
 
-impl Node {
-    fn new(name: &str, is_dir: bool, size: usize) -> Self {
-        let b = name.as_bytes();
-        let len = b.len().min(63);
-        let mut n = [0u8; 64];
-        n[..len].copy_from_slice(&b[..len]);
-        Self { name: n, name_len: len, is_dir, size }
-    }
-
-    fn show(&self) {
-        let s = core::str::from_utf8(&self.name[..self.name_len]).unwrap_or("");
-        if self.is_dir {
-            println!("  <DIR>  {}", s);
-        } else {
-            println!("  -rw-r--r--  {}  {} bytes", s, self.size);
-        }
-    }
+unsafe fn sys_open(path: &str, flags: u32, mode: u32) -> isize {
+    syscall3(2, path.as_ptr() as u64, flags as u64, mode as u64)
 }
 
-// Listagem real de um diretório (simulada sobre VFS bilingue / e C:\)
-fn list_directory(path: &str) {
-    println!("[hyb-files] Listando: {}", path);
-    let win = path.starts_with("C:") || path.starts_with("c:");
-    if win {
-        Node::new("Windows", true, 0).show();
-        Node::new("Program Files", true, 0).show();
-        Node::new("Users", true, 0).show();
-        Node::new("boot.ini", false, 256).show();
-        Node::new("ntoskrnl.exe", false, 8_412_864).show();
-    } else {
-        Node::new("bin", true, 0).show();
-        Node::new("etc", true, 0).show();
-        Node::new("usr", true, 0).show();
-        Node::new("var", true, 0).show();
-        Node::new("hybridos.toml", false, 4096).show();
-    }
-}
-
-// Leitura real de arquivo via sys_open / sys_read / sys_close
-fn read_file(path: &str) -> isize {
-    let mut buf = [0u8; BUF_SIZE];
-    let fd = sys_open(path, 0, 0); // O_RDONLY
+fn read_dir(path: &str) -> Vec<String> {
+    let fd = unsafe { sys_open(path, O_RDONLY | O_DIRECTORY, 0o644) };
     if fd < 0 {
-        println!("[hyb-files] Nao foi possivel abrir: {}", path);
-        return fd;
+        return Vec::new();
     }
-    let mut total: isize = 0;
-    loop {
-        let n = sys_read(fd as usize, &mut buf);
-        if n <= 0 {
-            break;
-        }
-        total += n;
-        let _ = sys_write(STDOUT_FILENO, &buf[..n as usize]);
+    let mut buf = [0u8; 4096];
+    let n = sys_read(fd as usize, &mut buf);
+    let _ = sys_close(fd as usize);
+    if n <= 0 {
+        return Vec::new();
     }
-    sys_close(fd as usize);
-    println!();
-    println!("[hyb-files] {} bytes lidos de {}", total, path);
-    total
-}
-
-// Checksum real FNV-1a dos bytes de um arquivo
-fn checksum_file(path: &str) -> u64 {
-    let mut buf = [0u8; BUF_SIZE];
-    let fd = sys_open(path, 0, 0);
-    if fd < 0 {
-        return 0;
-    }
-    let mut hash: u64 = 0xcbf29ce484222325;
-    loop {
-        let n = sys_read(fd as usize, &mut buf);
-        if n <= 0 {
-            break;
-        }
-        for &b in &buf[..n as usize] {
-            hash ^= b as u64;
-            hash = hash.wrapping_mul(0x100000001b3);
-        }
-    }
-    sys_close(fd as usize);
-    hash
+    let text = core::str::from_utf8(&buf[..n as usize]).unwrap_or("");
+    text.lines().map(|l| String::from(l.trim())).filter(|l| !l.is_empty()).collect()
 }
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    println!("========================================================");
-    println!("       hyb-files - Gerenciador de Arquivos I/O Async    ");
-    println!("========================================================");
-    list_directory("/");
-    println!();
-    list_directory("C:\\");
-    println!();
-    let _ = read_file("/etc/hybridos.toml");
-    println!();
-    let hash = checksum_file("/etc/hybridos.toml");
-    println!("[hyb-files] FNV-1a checksum /etc/hybridos.toml = 0x{:016X}", hash);
-    println!("[hyb-files] Sessao de gerenciamento de arquivos encerrada.");
-    sys_sched_yield();
-    sys_exit(0)
+    let path = "/";
+    let entries = read_dir(path);
+    for e in &entries {
+        println!("{}", e);
+    }
+    if entries.is_empty() {
+        println!("(diretório vazio ou não encontrado: {})", path);
+    }
+    sys_exit(0);
 }

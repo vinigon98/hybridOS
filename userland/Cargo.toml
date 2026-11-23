@@ -47,3 +47,8 @@ members = [
     "apps/hyb-pipe",
 ]
 resolver = "2"
+
+[profile.release]
+opt-level = 3
+panic = "abort"
+

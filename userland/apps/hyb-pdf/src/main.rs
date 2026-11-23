@@ -1,150 +1,83 @@
-//! hyb-pdf: Motor Nativo de Leitura e Impressao PDF (Ring 3 ELF64)
-//! Leitor ultraleve de PDF: cabecalho %PDF-, contagem de objetos, extrator de texto e impressora virtual.
+//! hyb-pdf: Visualizador de documentos PDF.
 
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
+extern crate alloc;
+
+use alloc::string::String;
+use alloc::vec::Vec;
 use libhybrid_sys::allocator::HybridUserAllocator;
-use libhybrid_sys::linux::*;
 use libhybrid_sys::{print, println};
+use libhybrid_sys::linux::{sys_read, sys_close, SYS_READ, SYS_CLOSE, sys_exit};
 
 #[global_allocator]
 static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
 
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("[hyb-pdf CRASH] {:?}", info);
-    sys_exit(1);
+const O_RDONLY: u32 = 0;
+
+#[inline(always)]
+unsafe fn syscall3(nr: u64, a1: u64, a2: u64, a3: u64) -> isize {
+    let ret: isize;
+    core::arch::asm!("syscall", inlateout("rax") nr => ret, in("rdi") a1, in("rsi") a2, in("rdx") a3, out("rcx") _, out("r11") _, options(nostack, preserves_flags));
+    ret
 }
 
-const MAX_OBJ: usize = 32;
-
-// Verifica cabecalho PDF real (%PDF-1.x)
-fn pdf_valido(dados: &[u8]) -> bool {
-    dados.len() >= 5
-        && dados[0] == b'%'
-        && dados[1] == b'P'
-        && dados[2] == b'D'
-        && dados[3] == b'F'
-        && dados[4] == b'-'
+#[inline(always)]
+unsafe fn syscall1(nr: u64, a1: u64) -> isize {
+    let ret: isize;
+    core::arch::asm!("syscall", inlateout("rax") nr => ret, in("rdi") a1, out("rcx") _, out("r11") _, options(nostack, preserves_flags));
+    ret
 }
 
-// Conta objetos reais (marcadores 'obj'/'endobj')
-fn contar_objetos(dados: &[u8]) -> usize {
-    let mut n = 0usize;
-    let mut i = 0;
-    while i + 3 <= dados.len() {
-        if dados[i] == b'o' && dados[i + 1] == b'b' && dados[i + 2] == b'j' {
-            n += 1;
-        }
-        i += 1;
-    }
-    n
+unsafe fn sys_open(path: &str, flags: u32, mode: u32) -> isize {
+    syscall3(2, path.as_ptr() as u64, flags as u64, mode as u64)
 }
 
-// Extrai texto real de strings entre parenteses (conteudo do PDF)
-fn extrair_texto(dados: &[u8], saida: &mut [u8]) -> usize {
-    let mut w = 0usize;
-    let mut i = 0;
-    while i < dados.len() {
-        if dados[i] == b'(' {
-            i += 1;
-            while i < dados.len() && dados[i] != b')' && w < saida.len().saturating_sub(1) {
-                saida[w] = dados[i];
-                w += 1;
-                i += 1;
-            }
-            if w < saida.len() {
-                saida[w] = b' ';
-                w += 1;
-            }
-        }
-        i += 1;
+fn read_file(path: &str) -> Option<Vec<u8>> {
+    let fd = unsafe { sys_open(path, O_RDONLY, 0o644) };
+    if fd < 0 { return None; }
+    let mut out = Vec::new();
+    let mut buf = [0u8; 4096];
+    loop {
+        let n = sys_read(fd as usize, &mut buf);
+        if n <= 0 { break; }
+        out.extend_from_slice(&buf[..n as usize]);
     }
-    w
-}
-
-// Gera um PDF minimo valido (cabecalho, objeto catalogo, stream de texto, trailer)
-fn gerar_pdf_minimo(buf: &mut [u8], texto: &str) -> usize {
-    let cab: &[u8] = b"%PDF-1.4\n";
-    let mut w = 0usize;
-    while w < cab.len() && w < buf.len() {
-        buf[w] = cab[w];
-        w += 1;
-    }
-    // objeto 1: catalogo
-    let obj: &[u8] = b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
-    let mut o = 0;
-    while o < obj.len() && w < buf.len() {
-        buf[w] = obj[o];
-        w += 1;
-        o += 1;
-    }
-    // objeto 2: pagina com stream de texto entre parenteses
-    let tb = texto.as_bytes();
-    if w + 40 < buf.len() {
-        let s: &[u8] = b"2 0 obj\n<< /Length ";
-        let mut q = 0;
-        while q < s.len() && w < buf.len() {
-            buf[w] = s[q];
-            w += 1;
-            q += 1;
-        }
-        let len = tb.len();
-        let d1 = (len / 100) as u8 + b'0';
-        let d2 = ((len % 100) / 10) as u8 + b'0';
-        let d3 = (len % 10) as u8 + b'0';
-        if w < buf.len() { buf[w] = d1; w += 1; }
-        if w < buf.len() { buf[w] = d2; w += 1; }
-        if w < buf.len() { buf[w] = d3; w += 1; }
-        let s2: &[u8] = b">>\nstream\n(";
-        q = 0;
-        while q < s2.len() && w < buf.len() {
-            buf[w] = s2[q];
-            w += 1;
-            q += 1;
-        }
-        let mut t = 0;
-        while t < tb.len() && w < buf.len() {
-            buf[w] = tb[t];
-            w += 1;
-            t += 1;
-        }
-        let s3: &[u8] = b")\nendstream\nendobj\n";
-        q = 0;
-        while q < s3.len() && w < buf.len() {
-            buf[w] = s3[q];
-            w += 1;
-            q += 1;
-        }
-    }
-    // trailer
-    let tr: &[u8] = b"trailer\n<< /Root 1 0 R >>\n%%EOF\n";
-    let mut q = 0;
-    while q < tr.len() && w < buf.len() {
-        buf[w] = tr[q];
-        w += 1;
-        q += 1;
-    }
-    w
+    let _ = sys_close(fd as usize);
+    Some(out)
 }
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    println!("========================================================");
-    println!("           hyb-pdf - Motor Nativo de Leitura PDF           ");
-    println!("========================================================");
-    let amostra: &[u8] = b"%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntexto (Ola HybridOS PDF)\n";
-    println!("[hyb-pdf] Cabecalho PDF valido? {}", pdf_valido(amostra));
-    println!("[hyb-pdf] Objetos encontrados: {}", contar_objetos(amostra));
-    let mut txt = [0u8; 64];
-    let n = extrair_texto(amostra, &mut txt);
-    println!("[hyb-pdf] Texto extraido: {}", core::str::from_utf8(&txt[..n]).unwrap_or(""));
-    let mut pdf = [0u8; 200];
-    let tam = gerar_pdf_minimo(&mut pdf, "Relatorio HybridOS - impressao virtual");
-    println!("[hyb-pdf] PDF minimo gerado: {} bytes (Print to PDF)", tam);
-    println!("[hyb-pdf] Leitor finalizado.");
-    sys_sched_yield();
-    sys_exit(0)
+    let path = "/documento.pdf";
+    println!("=== hyb-pdf: Visualizador PDF ===");
+    println!("Arquivo: {}", path);
+    println!("");
+
+    match read_file(path) {
+        Some(contents) => {
+            if contents.len() >= 5 && &contents[0..5] == b"%PDF-" {
+                println!("Formato: PDF válido");
+                println!("Tamanho: {} bytes", contents.len());
+                let text = core::str::from_utf8(&contents).unwrap_or("");
+                println!("Conteúdo extraído:");
+                println!("----------------------------------------");
+                let mut in_text = false;
+                for ch in text.chars() {
+                    if ch == '(' { in_text = true; }
+                    else if ch == ')' { in_text = false; print!(" "); }
+                    else if in_text && ch.is_ascii_graphic() { print!("{}", ch); }
+                }
+                println!("");
+                println!("----------------------------------------");
+            } else {
+                println!("[erro] arquivo não é um PDF válido");
+            }
+        }
+        None => {
+            println!("[erro] não foi possível ler: {}", path);
+        }
+    }
+    sys_exit(0);
 }

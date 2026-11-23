@@ -25,3 +25,4 @@ fn run() {
     putln("hyb-vm: conclusao da analise de virtualizacao.");
 }
 #[no_mangle] pub extern "C" fn _start() -> ! { run(); sys_exit(0); }
+
