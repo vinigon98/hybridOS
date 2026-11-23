@@ -5,15 +5,6 @@
 use libhybrid_sys::windows::*;
 use libhybrid_sys::nt_env::*;
 
-#[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {
-        unsafe {
-            core::arch::asm!("ud2", options(noreturn));
-        }
-    }
-}
-
 #[repr(C)]
 pub struct UnicodeString {
     pub length: u16,

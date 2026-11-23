@@ -4,15 +4,6 @@
 
 use libhybrid_sys::windows::*;
 
-#[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {
-        unsafe {
-            core::arch::asm!("ud2", options(noreturn));
-        }
-    }
-}
-
 pub type HWND = usize;
 pub type HDC = usize;
 pub type HMENU = usize;

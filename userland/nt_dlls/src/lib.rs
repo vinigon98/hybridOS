@@ -13,12 +13,3 @@ pub mod kernel32;
 pub mod user32;
 pub mod gdi32;
 
-#[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {
-        unsafe {
-            core::arch::asm!("ud2", options(noreturn));
-        }
-    }
-}
-

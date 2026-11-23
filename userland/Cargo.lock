@@ -17,6 +17,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "dig"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "gdi32"
 version = "0.1.0"
 dependencies = [
@@ -25,7 +32,42 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-admin"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-archive"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-audio-ctl"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-bootcfg"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-bt"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-bundle"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -67,7 +109,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-clean"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-clip"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-color"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-config-tree"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-crashlog"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -88,7 +158,56 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-crypt"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-devices"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-disk-cli"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-disks"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-dns"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-driver-check"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-edit"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-env"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -102,7 +221,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-firewall"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-focus"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-font-tune"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -116,7 +249,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-fsck"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-fsctl"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-gpuinfo"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-grep"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-guard"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -130,7 +291,105 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-hosts"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-hwinfo"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-image"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-ip"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-joy"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-lan-scan"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-linux"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-logs"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-mac"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-memtest"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-mixer"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-mount-net"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-mtr"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-net-adapters"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-netctl"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -151,6 +410,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-perf-ui"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-pipe"
 version = "0.1.0"
 dependencies = [
@@ -165,7 +431,63 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-policy"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-ports"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-power"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-print"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-proxy"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-rdp"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-reboot"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-resmon"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-route"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -193,7 +515,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-secpol"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-service"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-sh"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-shares"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-snapshot"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -207,7 +557,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-sudo"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-sync"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-tcp-test"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-telemetry-local"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -221,7 +592,42 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-top"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-trim"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-tui-config"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-users"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-vault"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-verify"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -242,11 +648,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "ip"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "kernel32"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
  "ntdll",
+]
+
+[[package]]
+name = "kill"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
 ]
 
 [[package]]
@@ -268,6 +688,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "ping"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "pkill"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "ps"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "scp"
 version = "0.1.0"
 dependencies = [
@@ -283,6 +724,13 @@ dependencies = [
 
 [[package]]
 name = "ssh-keygen"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "traceroute"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
