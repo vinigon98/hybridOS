@@ -1,7 +1,28 @@
 [workspace]
 members = [
     "libhybrid_sys",
-    "apps/hybctl",
-    "apps/hyb-settings",
+    "apps/hybrid_sh",
+    # Binarios 16-38 — Agente 2
+    "apps/hyb-term",
+    "apps/hyb-script-studio",
+    "apps/cmd-compat",
+    "apps/hyb-pkg",
+    "apps/hyb-linux",
+    "apps/hyb-vm",
+    "apps/hyb-sandbox",
+    "apps/ssh",
+    "apps/scp",
+    "apps/ssh-keygen",
+    "apps/hyb-ssh-agent",
+    "apps/curl",
+    "apps/hyb-archive",
+    "apps/hyb-hash",
+    "apps/which",
+    "apps/hyb-grep",
+    "apps/hyb-sync",
+    "apps/hyb-cron",
+    "apps/hyb-cronctl",
+    "apps/hyb-runner",
+    "apps/hyb-pipe",
 ]
 resolver = "2"

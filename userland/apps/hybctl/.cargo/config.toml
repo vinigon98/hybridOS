@@ -1,3 +1,7 @@
+# Configuracao local do hybctl: compila como aplicativo console Windows nativo
+# (sobrescreve o linker/flags de kernel do workspace pai).
 [target.x86_64-pc-windows-msvc]
-linker = "C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\VC\\Tools\\MSVC\\14.50.35717\\bin\\Hostx64\\x64\\link.exe"
-rustflags = []
+linker = "C:\\Users\\Vinicius\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\lib\\rustlib\\x86_64-pc-windows-msvc\\bin\\rust-lld.exe"
+rustflags = [
+    "-C", "link-arg=/flavor:link",
+]
