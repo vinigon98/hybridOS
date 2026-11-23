@@ -5,23 +5,17 @@
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
-use libhybrid_sys::allocator::HybridUserAllocator;
-use libhybrid_sys::{print, println};
-use libhybrid_sys::linux::{sys_open, sys_read, sys_write, sys_close, sys_exit};
+extern crate alloc;
 
 use alloc::string::String;
 use alloc::vec::Vec;
 use alloc::format;
+use libhybrid_sys::allocator::HybridUserAllocator;
+use libhybrid_sys::{print, println};
+use libhybrid_sys::linux::{sys_open, sys_read, sys_write, sys_close, sys_exit};
 
 #[global_allocator]
 static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
-
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    println!("[hybctl] erro interno inesperado");
-    sys_exit(1);
-}
 
 const CONFIG_PATHS: [&str; 2] = ["etc/hybridos/system.toml", "/etc/hybridos/system.toml"];
 const ARGS_PATHS: [&str; 2] = ["etc/hybridos/hybctl.args", "/etc/hybridos/hybctl.args"];
@@ -96,7 +90,7 @@ fn load_doc() -> Option<TomlDoc> {
                 if let Some(eq) = line.find('=') {
                     let key = trim(&line[..eq]); let val = parse_value(&line[eq+1..]);
                     if key.is_empty() { continue; }
-                    match &cur { Some(s) => doc.set(s, key, val), None => doc.set("__root__", key, val); }
+                    match &cur { Some(s) => { doc.set(s, key, val.clone()); }, None => { doc.set("__root__", key, val.clone()); } }
                 }
             }
             return Some(doc);
@@ -130,13 +124,13 @@ fn read_stdin_line() -> Option<String> {
 fn cmd_get(key: &str) {
     let doc = match load_doc() { Some(d) => d, None => { println!("[hybctl] não foi possível carregar /etc/hybridos/system.toml"); sys_exit(0); } };
     let Some((sec, k)) = split_key(key) else { println!("[hybctl] formato inválido (use secao.chave): {}", key); sys_exit(0); };
-    match doc.get(sec, k) { Some(v) => println!("{} = {}", key, format_value(v)), None => println!("[hybctl] parâmetro não encontrado: {}", key) }
+    match doc.get(sec, k) { Some(v) => { println!("{} = {}", key, format_value(v)); }, None => { println!("[hybctl] parâmetro não encontrado: {}", key); } }
 }
 fn cmd_set(key: &str, value_raw: &str) {
     let Some((sec, k)) = split_key(key) else { println!("[hybctl] formato inválido (use secao.chave): {}", key); sys_exit(0); };
     let val = parse_value(value_raw);
     let mut doc = match load_doc() { Some(d) => d, None => TomlDoc::new() };
-    doc.set(sec, k, val);
+    doc.set(sec, k, val.clone());
     let mut out = String::from("# /etc/hybridos/system.toml — Configuração Base do Hybridos OS\n# Atualizado via `hybctl set`.\n\n");
     for s in &doc.sections { out.push_str(&format!("[{}]\n", s)); for e in doc.entries.iter() { if e.section == *s { out.push_str(&format!("{} = {}\n", e.key, format_value(&e.value))); } } out.push('\n'); }
     let root: Vec<&TomlEntry> = doc.entries.iter().filter(|e| e.section == "__root__").collect();

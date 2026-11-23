@@ -94,6 +94,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-settings"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-sh"
 version = "0.1.0"
 dependencies = [
@@ -124,6 +131,13 @@ dependencies = [
 [[package]]
 name = "hyb-vm"
 version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hybctl"
+version = "1.0.0"
 dependencies = [
  "libhybrid_sys",
 ]
