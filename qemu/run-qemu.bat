@@ -25,8 +25,6 @@ if not exist "%QEMU_BIN%" (
     -vga std ^
     -display gtk ^
     -serial file:hybrid_serial.log ^
-    -device usb-mouse ^
-    -device usb-kbd ^
     -device ahci,id=ahci0 ^
     -drive file=hybridos_system.img,format=raw,if=none,id=bootdisk ^
     -device ide-hd,drive=bootdisk,bus=ahci0.0,bootindex=1 ^

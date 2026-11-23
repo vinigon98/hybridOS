@@ -9,7 +9,6 @@
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::fmt::Write;
-use core::sync::atomic::Ordering as AtomicOrdering;
 
 // ============================================================================
 // 1. Paleta de Cores (inspirada em Windows 11 / macOS / Material Design)
@@ -44,7 +43,7 @@ pub const SUCCESS_COLOR: u32 = 0x0010B981;
 /// Aviso (Amber 500)
 pub const WARNING_COLOR: u32 = 0x00F59E0B;
 /// Sobreposição escura (menus, modais)
-pub const OVERLAY_DARK: u32 = 0x80000000;
+pub const OVERLAY_DARK: u32 = 0x80000000; // alpha simulado por cor sólida escura
 
 // ============================================================================
 // 2. Espaçamentos e Medidas
