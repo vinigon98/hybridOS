@@ -17,7 +17,57 @@ dependencies = [
 ]
 
 [[package]]
+name = "gdi32"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+ "user32",
+]
+
+[[package]]
 name = "hyb-archive"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-calc"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-capture"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-cert-sys"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-cert-user"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-chars"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-clip"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -32,6 +82,34 @@ dependencies = [
 
 [[package]]
 name = "hyb-cronctl"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-edit"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-files"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-focus"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-fonts"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -59,6 +137,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-paint"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-pdf"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-pipe"
 version = "0.1.0"
 dependencies = [
@@ -67,6 +159,13 @@ dependencies = [
 
 [[package]]
 name = "hyb-pkg"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-rdp"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -122,6 +221,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-vault"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-vm"
 version = "0.1.0"
 dependencies = [
@@ -129,8 +235,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-zoom"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "kernel32"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+ "ntdll",
+]
+
+[[package]]
 name = "libhybrid_sys"
 version = "0.1.0"
+
+[[package]]
+name = "nt_dlls"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "ntdll"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
 
 [[package]]
 name = "scp"
@@ -148,6 +283,13 @@ dependencies = [
 
 [[package]]
 name = "ssh-keygen"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "user32"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",

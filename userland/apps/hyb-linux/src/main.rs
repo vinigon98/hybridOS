@@ -28,3 +28,4 @@ fn run() {
     put("\nFim da lista de processos.\r\n");
 }
 #[no_mangle] pub extern "C" fn _start() -> ! { run(); sys_exit(0); }
+

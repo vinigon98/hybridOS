@@ -2,5 +2,12 @@
 name = "hyb-vm"
 version = "0.1.0"
 edition = "2021"
+
+[profile.release]
+opt-level = 3
+panic = "abort"
 [dependencies]
 libhybrid_sys = { path = "../../libhybrid_sys" }
+
+
+

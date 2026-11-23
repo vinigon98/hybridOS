@@ -17,3 +17,4 @@ fn run() {
     putln("hyb-cronctl: encerrado.");
 }
 #[no_mangle] pub extern "C" fn _start() -> ! { run(); sys_exit(0); }
+

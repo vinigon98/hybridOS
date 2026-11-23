@@ -25,3 +25,4 @@ fn run() {
     if !matched { put("nenhuma coincidencia para: "); putln(pattern); } putln("hyb-grep: busca concluida.");
 }
 #[no_mangle] pub extern "C" fn _start() -> ! { run(); sys_exit(0); }
+

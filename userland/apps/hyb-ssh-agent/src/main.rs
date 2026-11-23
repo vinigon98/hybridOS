@@ -20,3 +20,4 @@ fn run() {
     putln("hyb-ssh-agent: daemon encerrado de forma controlada.");
 }
 #[no_mangle] pub extern "C" fn _start() -> ! { run(); sys_exit(0); }
+
