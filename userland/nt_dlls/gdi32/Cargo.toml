@@ -1,0 +1,12 @@
+[package]
+name = "gdi32"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "gdi32"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+libhybrid_sys = { path = "../../libhybrid_sys" }
+user32 = { path = "../user32" }

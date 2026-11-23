@@ -231,6 +231,15 @@ pub extern "C" fn _start() -> ! {
         test_ring3_dual_personality(fat32_fs.as_ref());
     }
 
+    // 12.1. Try to load and execute an external .exe from VFS (if present)
+    if let Ok((_pcb, _tcb)) = loaders::load_pe_from_vfs("/Program Files/hello.exe") {
+        crate::serial_println!("[PE-VFS] External .exe loaded and running from /Program Files/hello.exe");
+    } else if let Ok((_pcb, _tcb)) = loaders::load_pe_from_vfs("/Downloads/hello.exe") {
+        crate::serial_println!("[PE-VFS] External .exe loaded and running from /Downloads/hello.exe");
+    } else if let Ok((_pcb, _tcb)) = loaders::load_pe_from_vfs("/hello.exe") {
+        crate::serial_println!("[PE-VFS] External .exe loaded and running from /hello.exe");
+    }
+
     crate::serial_println!("\n================================================================");
     crate::serial_println!("  [HybridOS Kernel] Bare-Metal Ring 0 Initialization Complete!   ");
     crate::serial_println!("  Zero Simulation - Real x86_64 Long Mode, PML4 Paging & Hardware Port I/O");
