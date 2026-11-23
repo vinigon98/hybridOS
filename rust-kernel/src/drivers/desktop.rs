@@ -1983,8 +1983,17 @@ unsafe fn draw_single_crystal_window(
         (w.id, w.title, w.x, w.y, w.w, w.h)
     };
 
-    // 1. Crystal Glass Window Frame with live theme color & specular reflections
+    // 1. Crystal Glass Window Frame with live theme color & specular reflections (borders only)
     draw_crystal_glass_window_frame(fb, pitch, scr_w, scr_h, w_x, w_y, w_w, w_h, is_focused);
+
+    // 1b. Explicit Title Bar fill (inside borders, height=32px) - ensures visible background
+    let title_bar_y = w_y + 4;
+    let title_bar_h = 28;
+    let title_bar_x = w_x + 4;
+    let title_bar_w = w_w.saturating_sub(8);
+    let theme = crate::drivers::apps_cat6_media::get_current_theme();
+    let title_bg = if is_focused { theme.frame_active_color } else { theme.frame_inactive_color };
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, title_bar_x, title_bar_y, title_bar_w, title_bar_h, 4, title_bg);
 
     // 2. Window Title Text
     let title_color = if is_focused { 0x00FFFFFF } else { 0x00CBD5E1 };
