@@ -1094,7 +1094,11 @@ pub fn update_desktop_interactive(current_input: &str, prompt: &str) {
         let mut con_lock = GOP_CONSOLE.lock();
         let mut desk_lock = DESKTOP.lock();
         if let (Some(ref mut con), Some(ref mut desk)) = (&mut *con_lock, &mut *desk_lock) {
-            if !con.fb_ptr.is_null() && (desk.saved_cursor_x != mx || desk.saved_cursor_y != my) {
+            // Throttled cursor update: only redraw cursor when mouse moves significantly
+            // to avoid flicker from continuous restore/draw cycles
+            let moved_enough = (desk.saved_cursor_x as i32 - mx).abs() >= 2
+                || (desk.saved_cursor_y as i32 - my).abs() >= 2;
+            if moved_enough && !con.fb_ptr.is_null() {
                 unsafe {
                     restore_cursor_bg(con.fb_ptr, con.pitch, con.width, con.height, desk);
                     save_and_draw_cursor(con.fb_ptr, con.pitch, con.width, con.height, desk, mx, my);
@@ -2043,7 +2047,7 @@ unsafe fn draw_single_crystal_window(
     let canvas_w = w_w.saturating_sub(8);
     let canvas_h = w_h.saturating_sub(36);
 
-    fill_rounded_rect(fb, pitch, scr_w, scr_h, canvas_x, canvas_y, canvas_w, canvas_h, 4, 0x000F172A);
+    fill_rounded_rect(fb, pitch, scr_w, scr_h, canvas_x, canvas_y, canvas_w, canvas_h, 4, BG_SURFACE);
 
     // 5. Render native application content via dedicated category module
     dispatch_app_render(
