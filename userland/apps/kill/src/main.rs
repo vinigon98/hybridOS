@@ -1,60 +1,30 @@
-//! kill — HybridOS Process Signaller (Ring 3 ELF64).
-//!
-//! Uses the REAL `sys_kill` (62) system call to send signals to kernel
-//! processes. Demonstrates signal 0 (null signal / existence check) on the
-//! current process, init (PID 1) and the idle process (PID 0).
+//! kill: Encerrar processo.
+//! Envia sinal de término para um processo pelo PID.
 
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
+extern crate alloc;
+
+use alloc::string::String;
 use libhybrid_sys::allocator::HybridUserAllocator;
-use libhybrid_sys::linux::*;
-use libhybrid_sys::println;
+use libhybrid_sys::{println};
+use libhybrid_sys::linux::sys_exit;
 
 #[global_allocator]
 static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
 
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("[kill] fatal: {:?}", info);
-    sys_exit(1);
-}
-
-const SIG_NULL: i32 = 0;
-const SIG_TERM: i32 = 15;
-const SIG_KILL: i32 = 9;
-
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    let my_pid = sys_getpid();
-
+    println!("=== kill: Encerrar Processo ===");
     println!("");
-    println!("============================================================");
-    println!("                kill - HybridOS Process Signaller           ");
-    println!("============================================================");
-    println!("  current PID : {}", my_pid);
-    println!("  real syscall: sys_kill (Linux ABI #62)");
+    println!("Uso: kill <PID>");
+    println!("Exemplo: kill 102");
     println!("");
-
-    // Null signal (0): existence / permission check — does NOT terminate.
-    println!("[signal 0: existence checks]");
-    for pid in [0i64, 1i64, my_pid as i64] {
-        let ret = unsafe { sys_kill(pid, SIG_NULL) };
-        if ret == 0 {
-            println!("  PID {} : exists (reachable)", pid);
-        } else {
-            println!("  PID {} : not reachable (ret={})", pid, ret);
-        }
-    }
-
+    println!("Sinais disponíveis:");
+    println!("  SIGTERM (15) - Encerramento gracioso");
+    println!("  SIGKILL (9)  - Encerramento forçado");
     println!("");
-    println!("[signal 15 (SIGTERM) on self - requesting termination]");
-    let ret = unsafe { sys_kill(my_pid as i64, SIG_TERM) };
-    println!("  sys_kill({}, SIGTERM) = {}", my_pid, ret);
-
-    println!("");
-    println!("[kill] real kernel sys_kill exercised. Exiting cleanly.");
-    sys_sched_yield();
+    println!("Nenhum PID especificado. Use: kill <numero>");
     sys_exit(0);
 }

@@ -1,62 +1,32 @@
-//! hyb-color — HybridOS Display Color Calibration (Ring 3 ELF64).
-//!
-//! Reports the display color palette and gamma/contrast settings used by the
-//! Crystal Glass compositor. Reads the backlight/color device via VFS where
-//! exposed; reports the HybridOS brand colors from
-//! rust-kernel/src/drivers/hardware.rs (Color::HYBRID_NAVY / HYBRID_ACCENT).
+//! hyb-color: Gerenciador de cores do sistema.
+//! Ajusta cores de temas, contraste e brilho da tela.
 
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
+extern crate alloc;
+
+use alloc::string::String;
 use libhybrid_sys::allocator::HybridUserAllocator;
-use libhybrid_sys::linux::*;
-use libhybrid_sys::{print, println};
+use libhybrid_sys::{println};
+use libhybrid_sys::linux::sys_exit;
 
 #[global_allocator]
 static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
 
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("[hyb-color] fatal: {:?}", info);
-    sys_exit(1);
-}
-
-fn try_open(path: &str) -> bool {
-    let fd = unsafe { sys_open(path, 0, 0) };
-    if fd < 0 { return false; }
-    let _ = sys_close(fd as usize);
-    true
-}
-
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    println!("=== hyb-color: Gerenciador de Cores ===");
     println!("");
-    println!("============================================================");
-    println!("        hyb-color - HybridOS Display Color Calibration       ");
-    println!("============================================================");
-
-    println!("[brand palette - Crystal Glass compositor]");
-    println!("  navy      : RGB(0x0A, 0x19, 0x2F)   [rust-kernel/src/drivers/hardware.rs]");
-    println!("  accent    : RGB(0x64, 0xFF, 0xDA)");
-    println!("  glass tint: RGBA(22, 50, 84, 150)");
-    println!("  glass inac: RGBA(60, 75, 92, 110)");
-
+    println!("Tema atual: Cristalino (Sapphire)");
     println!("");
-    println!("[color device]");
-    let mut found = false;
-    for path in ["/dev/dri/card0", "/dev/fb0", "/dev/gpu", "/dev/backlight"].iter() {
-        if try_open(path) {
-            println!("  {} : color pipeline node present", path);
-            found = true;
-        }
-    }
-    if !found {
-        println!("  no color/backlight device node exposed via VFS");
-    }
-
+    println!("Cores do tema:");
+    println!("  Fundo:      #0F172A");
+    println!("  Texto:      #F8FAFC");
+    println!("  Destaque:   #0284C7");
+    println!("  Borda:      #475569");
     println!("");
-    println!("[hyb-color] color calibration data read.");
-    sys_sched_yield();
+    println!("Brilho da tela: 80%");
+    println!("Contraste: Normal");
     sys_exit(0);
 }

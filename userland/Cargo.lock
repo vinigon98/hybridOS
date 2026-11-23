@@ -24,6 +24,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-audio-ctl"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-bootcfg"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-color"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-crashlog"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-cron"
 version = "0.1.0"
 dependencies = [
@@ -32,6 +60,41 @@ dependencies = [
 
 [[package]]
 name = "hyb-cronctl"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-devices"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-driver-check"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-env"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-font-tune"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-gpuinfo"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -52,7 +115,49 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-hwinfo"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-joy"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-linux"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-logs"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-memtest"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-mixer"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-perf-ui"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -67,6 +172,27 @@ dependencies = [
 
 [[package]]
 name = "hyb-pkg"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-power"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-reboot"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-resmon"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -115,7 +241,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyb-telemetry-local"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "hyb-term"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-top"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -129,8 +269,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "kill"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
 name = "libhybrid_sys"
 version = "0.1.0"
+
+[[package]]
+name = "pkill"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "ps"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
 
 [[package]]
 name = "scp"
