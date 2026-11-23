@@ -5,7 +5,8 @@
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
+extern crate alloc;
+
 use libhybrid_sys::allocator::HybridUserAllocator;
 use libhybrid_sys::{print, println};
 use libhybrid_sys::linux::{sys_open, sys_read, sys_write, sys_close, sys_exit};
@@ -16,12 +17,6 @@ use alloc::format;
 
 #[global_allocator]
 static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
-
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    println!("[hyb-settings] erro interno inesperado");
-    sys_exit(1);
-}
 
 const CONFIG_PATHS: [&str; 2] = ["etc/hybridos/system.toml", "/etc/hybridos/system.toml"];
 const ARGS_PATHS: [&str; 2] = ["etc/hybridos/hybctl.args", "/etc/hybridos/hybctl.args"];
@@ -89,7 +84,7 @@ fn load_doc() -> Option<TomlDoc> {
                 if let Some(eq) = line.find('=') {
                     let key = trim(&line[..eq]); let val = parse_value(&line[eq+1..]);
                     if key.is_empty() { continue; }
-                    match &cur { Some(s) => doc.set(s, key, val), None => doc.set("__root__", key, val); }
+                    match &cur { Some(s) => { doc.set(s, key, val.clone()); }, None => { doc.set("__root__", key, val.clone()); } }
                 }
             }
             return Some(doc);
@@ -196,7 +191,7 @@ fn cmd_set(key: &str, value_raw: &str) {
     let Some((sec, k)) = split_key(key) else { println!("[hyb-settings] formato inválido (use secao.chave): {}", key); return; };
     let val = parse_value(value_raw);
     let mut doc = match load_doc() { Some(d) => d, None => TomlDoc::new() };
-    doc.set(sec, k, val);
+    doc.set(sec, k, val.clone());
     let mut out = String::from("# /etc/hybridos/system.toml — Configuração Base do Hybridos OS\n# Atualizado via `hyb-settings`.\n\n");
     for s in &doc.sections { out.push_str(&format!("[{}]\n", s)); for e in doc.entries.iter() { if e.section == *s { out.push_str(&format!("{} = {}\n", e.key, format_value(&e.value))); } } out.push('\n'); }
     if write_file(CONFIG_PATHS[0], &out) { println!("{} = {} (gravado)", key, format_value(&val)); }

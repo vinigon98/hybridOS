@@ -3,91 +3,112 @@
 version = 4
 
 [[package]]
-name = "cmd-compat"
+name = "hyb-admin"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "curl"
+name = "hyb-clean"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-archive"
+name = "hyb-config-tree"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-cron"
+name = "hyb-crypt"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-cronctl"
+name = "hyb-disk-cli"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-grep"
+name = "hyb-disks"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-hash"
+name = "hyb-firewall"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-linux"
+name = "hyb-fsck"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-pipe"
+name = "hyb-fsctl"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-pkg"
+name = "hyb-guard"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-runner"
+name = "hyb-image"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-sandbox"
+name = "hyb-policy"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-script-studio"
+name = "hyb-print"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-secpol"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-service"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-settings"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -101,28 +122,42 @@ dependencies = [
 ]
 
 [[package]]
-name = "hyb-ssh-agent"
+name = "hyb-snapshot"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-sync"
+name = "hyb-sudo"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-term"
+name = "hyb-trim"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
 ]
 
 [[package]]
-name = "hyb-vm"
+name = "hyb-tui-config"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-users"
+version = "0.1.0"
+dependencies = [
+ "libhybrid_sys",
+]
+
+[[package]]
+name = "hyb-verify"
 version = "0.1.0"
 dependencies = [
  "libhybrid_sys",
@@ -131,31 +166,3 @@ dependencies = [
 [[package]]
 name = "libhybrid_sys"
 version = "0.1.0"
-
-[[package]]
-name = "scp"
-version = "0.1.0"
-dependencies = [
- "libhybrid_sys",
-]
-
-[[package]]
-name = "ssh"
-version = "0.1.0"
-dependencies = [
- "libhybrid_sys",
-]
-
-[[package]]
-name = "ssh-keygen"
-version = "0.1.0"
-dependencies = [
- "libhybrid_sys",
-]
-
-[[package]]
-name = "which"
-version = "0.1.0"
-dependencies = [
- "libhybrid_sys",
-]

@@ -3,9 +3,9 @@ name = "hyb-crypt"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "hyb-crypt"
-path = "src/main.rs"
-
 [dependencies]
 libhybrid_sys = { path = "../../libhybrid_sys" }
+
+[profile.release]
+opt-level = 3
+panic = "abort"
