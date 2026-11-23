@@ -103,3 +103,75 @@ window_tiling = false
 virtual_desktops = true
 compositor_effects = true
 tray_telemetry = false
+
+# ============================================================
+# Módulo 6 — Ferramentas de Desenvolvedor e Depuração (10)
+# ============================================================
+
+[developer]
+kernel_boost = false
+debug_symbols = true
+verbose_boot = false
+syscall_trace = false
+ring3_debug = false
+stack_protector = true
+dev_console = true
+compiler_warnings = true
+profiling = false
+memory_protection = true
+
+# ============================================================
+# Módulo 7 — Jogos, DirectX e Performance de GPU (8)
+# ============================================================
+
+[gaming]
+game_mode = false
+directx_12 = true
+vulkan = true
+kernel_boost = false
+fps_limit = 0
+gpu_overclock = false
+variable_refresh = true
+hardware_scheduling = true
+
+# ============================================================
+# Módulo 8 — Rede, DNS e Conectividade (10)
+# ============================================================
+
+[net]
+dns_encrypted = true
+dns_server = "1.1.1.1"
+dns_fallback = "8.8.8.8"
+ipv6 = false
+firewall_enabled = true
+upnp = false
+wol = false
+mtu = 1500
+tcp_fast_open = true
+network_discovery = false
+
+# ============================================================
+# Módulo 9 — Privacidade e Telemetria (8)
+# ============================================================
+
+[privacy]
+zero_telemetry = false
+crash_reporting = false
+location_services = false
+diagnostic_data = "basic"
+advertising_id = false
+activity_history = false
+cloud_sync = false
+personalization = false
+
+# ============================================================
+# Módulo 10 — Atualizações e Manutenção (6)
+# ============================================================
+
+[update]
+auto_update = false
+update_channel = "stable"
+driver_updates = true
+security_patches = true
+update_notifications = true
+restart_prompt = true

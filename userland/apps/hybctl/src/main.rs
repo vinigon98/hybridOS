@@ -150,9 +150,69 @@ fn cmd_list() {
     for s in &doc.sections { println!("\n[{}]", s); for e in doc.entries.iter() { if e.section == *s { println!("  {} = {}", e.key, format_value(&e.value)); } } }
     println!("\nTotal de parâmetros: {}", doc.entries.len());
 }
+
+fn cmd_reset(key: &str) {
+    let doc = match load_doc() { Some(d) => d, None => { println!("[hybctl] não foi possível carregar /etc/hybridos/system.toml"); sys_exit(0); } };
+    let Some((sec, k)) = split_key(key) else { println!("[hybctl] formato inválido (use secao.chave): {}", key); sys_exit(0); };
+    if doc.get(sec, k).is_none() { println!("[hybctl] parâmetro não encontrado: {}", key); sys_exit(0); }
+    let mut doc = doc;
+    let default_val = match doc.entries.iter().find(|e| e.section == sec && e.key == k) {
+        Some(e) => match e.value { TomlValue::Bool(_) => TomlValue::Bool(false), TomlValue::Int(_) => TomlValue::Int(0), TomlValue::Str(_) => TomlValue::Str(String::new()) },
+        None => TomlValue::Bool(false),
+    };
+    doc.set(sec, k, default_val);
+    let mut out = String::from("# /etc/hybridos/system.toml — Configuração Base do Hybridos OS\n# Atualizado via `hybctl reset`.\n\n");
+    for s in &doc.sections { out.push_str(&format!("[{}]\n", s)); for e in doc.entries.iter() { if e.section == *s { out.push_str(&format!("{} = {}\n", e.key, format_value(&e.value))); } } out.push('\n'); }
+    let root: Vec<&TomlEntry> = doc.entries.iter().filter(|e| e.section == "__root__").collect();
+    if !root.is_empty() { out.push_str("# (sem seção)\n"); for e in &root { out.push_str(&format!("{} = {}\n", e.key, format_value(&e.value))); } }
+    if write_file(CONFIG_PATHS[0], &out) { println!("{} resetado para padrão de fábrica em {}", key, CONFIG_PATHS[0]); }
+    else { println!("[hybctl] falha ao gravar {}", CONFIG_PATHS[0]); }
+}
+
+fn cmd_export() {
+    let doc = match load_doc() { Some(d) => d, None => { println!("[hybctl] não foi possível carregar /etc/hybridos/system.toml"); sys_exit(0); } };
+    let mut out = String::from("# /etc/hybridos/system.toml — Exportado via `hybctl export`.\n\n");
+    for s in &doc.sections { out.push_str(&format!("[{}]\n", s)); for e in doc.entries.iter() { if e.section == *s { out.push_str(&format!("{} = {}\n", e.key, format_value(&e.value))); } } out.push('\n'); }
+    let root: Vec<&TomlEntry> = doc.entries.iter().filter(|e| e.section == "__root__").collect();
+    if !root.is_empty() { out.push_str("# (sem seção)\n"); for e in &root { out.push_str(&format!("{} = {}\n", e.key, format_value(&e.value))); } }
+    print!("{}", out);
+}
+
+fn cmd_import(file: &str) {
+    let mut doc = match load_doc() { Some(d) => d, None => TomlDoc::new() };
+    if let Some(data) = read_file(file) {
+        let text = match core::str::from_utf8(&data) { Ok(t) => t, Err(_) => { println!("[hybctl] arquivo não é UTF-8 válido: {}", file); sys_exit(0); } };
+        let mut imported = 0usize;
+        for line in text.lines() {
+            let line = trim(strip_comment(line));
+            if line.is_empty() { continue; }
+            if line.starts_with('[') && line.ends_with(']') {
+                let sec = trim(&line[1..line.len()-1]);
+                if !sec.is_empty() { doc.ensure_section(sec); }
+                continue;
+            }
+            if let Some(eq) = line.find('=') {
+                let key = trim(&line[..eq]); let val = parse_value(&line[eq+1..]);
+                if key.is_empty() { continue; }
+                doc.set("__root_section", key, val);
+                imported += 1;
+            }
+        }
+        let mut out = String::from("# /etc/hybridos/system.toml — Atualizado via `hybctl import`.\n\n");
+        for s in &doc.sections { out.push_str(&format!("[{}]\n", s)); for e in doc.entries.iter() { if e.section == *s { out.push_str(&format!("{} = {}\n", e.key, format_value(&e.value))); } } out.push('\n'); }
+        let root: Vec<&TomlEntry> = doc.entries.iter().filter(|e| e.section == "__root__").collect();
+        if !root.is_empty() { out.push_str("# (sem seção)\n"); for e in &root { out.push_str(&format!("{} = {}\n", e.key, format_value(&e.value))); } }
+        if write_file(CONFIG_PATHS[0], &out) { println!("{} parâmetros importados de {} para {}", imported, file, CONFIG_PATHS[0]); }
+        else { println!("[hybctl] falha ao gravar {}", CONFIG_PATHS[0]); }
+    } else {
+        println!("[hybctl] não foi possível ler o arquivo: {}", file);
+        sys_exit(0);
+    }
+}
+
 fn cmd_help() {
     println!("hybctl — Controlador Central de Configuração do Hybridos OS");
-    println!("Comandos: get <secao.chave> | set <secao.chave> <v> | list | help");
+    println!("Comandos: get <secao.chave> | set <secao.chave> <v> | list | reset <secao.chave> | export | import <arquivo> | help");
     println!("Módulos: 1 display 2 audio 3 input 4 power 5 shell | 6 developer 7 gaming 8 net 9 privacy 10 update");
     println!("Exemplos: hybctl get gaming.kernel_boost   hybctl get privacy.zero_telemetry   hybctl set net.dns_encrypted true");
     println!("Argumentos lidos de etc/hybridos/hybctl.args (uma linha) ou este help.");
@@ -169,6 +229,9 @@ pub extern "C" fn _start() -> ! {
         "get" => { if args.len() < 2 { println!("[hybctl] uso: hybctl get <secao.chave>"); sys_exit(0); } cmd_get(&args[1]); }
         "set" => { if args.len() < 3 { println!("[hybctl] uso: hybctl set <secao.chave> <valor>"); sys_exit(0); } cmd_set(&args[1], &args[2]); }
         "list" => { cmd_list(); }
+        "reset" => { if args.len() < 2 { println!("[hybctl] uso: hybctl reset <secao.chave>"); sys_exit(0); } cmd_reset(&args[1]); }
+        "export" => { cmd_export(); }
+        "import" => { if args.len() < 2 { println!("[hybctl] uso: hybctl import <arquivo>"); sys_exit(0); } cmd_import(&args[1]); }
         "help" | "--help" | "-h" => { cmd_help(); }
         other => { println!("[hybctl] comando desconhecido: {}", other); println!("[hybctl] digite 'hybctl help'"); }
     }
