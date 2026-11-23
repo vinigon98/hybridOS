@@ -31,7 +31,7 @@ use crate::drivers::gfx2d::{
 use crate::drivers::ux_design_system::{
     BG_WINDOW_ACTIVE, BG_SURFACE, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
     ACCENT_PRIMARY, ACCENT_HOVER, ACCENT_PRESSED, BORDER_SUBTLE, BORDER_FOCUSED,
-    ERROR_COLOR, SPACE_S, SPACE_M, BORDER_RADIUS_M, BTN_HEIGHT, ButtonState,
+    ERROR_COLOR, SPACE_S, SPACE_M, BORDER_RADIUS_M, BORDER_RADIUS_L, BTN_HEIGHT, ButtonState,
     Tooltip, Modal, ModalResult, FocusManager, HotkeyRegistry, HotkeyAction,
     draw_focus_ring, HIGH_CONTRAST, set_high_contrast, is_high_contrast,
     theme_bg, theme_text_primary, theme_accent, theme_border,
@@ -1151,8 +1151,20 @@ fn handle_desktop_click(cx: usize, cy: usize) {
         return;
     }
 
-    // 1. Crystal Sphere Emblem click (Start Menu Toggle)
-    let emblem_dx = (cx as isize) - 28;
+    // 1. Windows 11 Start Button click (Start Menu Toggle)
+    let start_btn_x = 12;
+    let start_btn_y = scr_h - 34;
+    let start_btn_w = 56;
+    let start_btn_h = 26;
+    if cx >= start_btn_x && cx <= start_btn_x + start_btn_w && cy >= start_btn_y && cy <= start_btn_y + start_btn_h {
+        desk.start_menu_open = !desk.start_menu_open;
+        desk.start_menu_cat = 0;
+        desk.search_query.clear();
+        return;
+    }
+
+    // 1b. Crystal Sphere Emblem click (Start Menu Toggle - alternative)
+    let emblem_dx = (cx as isize) - 82;
     let emblem_dy = (cy as isize) - ((scr_h - 22) as isize);
     if emblem_dx * emblem_dx + emblem_dy * emblem_dy <= 24 * 24 {
         desk.start_menu_open = !desk.start_menu_open;
@@ -1168,9 +1180,12 @@ fn handle_desktop_click(cx: usize, cy: usize) {
         return;
     }
 
-    // 3. Start Menu interaction (if open)
-    let sm_y = scr_h - 540;
-    if desk.start_menu_open && cx >= 8 && cx <= 428 && cy >= sm_y && cy <= scr_h - 40 {
+    // 3. Start Menu interaction (if open) — Windows 11 centered layout
+    let sm_w = 640usize;
+    let sm_h = 720usize;
+    let sm_x = (scr_w / 2).saturating_sub(sm_w / 2);
+    let sm_y = (scr_h / 2).saturating_sub(sm_h / 2);
+    if desk.start_menu_open && cx >= sm_x && cx <= sm_x + sm_w && cy >= sm_y && cy <= sm_y + sm_h {
         // 3a. Power button [ Desligar | ▸ ] in right column — abre modal de confirmação
         let btn_x = 8 + 250 + 12;
         let btn_y = sm_y + 500 - 42;
@@ -1209,48 +1224,132 @@ fn handle_desktop_click(cx: usize, cy: usize) {
             }
         }
 
-        // 3c. Category selector pills in left column header: [Top | C1 | C2 | C3 | C4 | C5 | C6 | C7]
-        if cy >= sm_y + 12 && cy <= sm_y + 36 && cx >= 14 && cx <= 250 {
-            let pill_idx = (cx - 14) / 29;
-            if pill_idx <= 7 {
-                desk.start_menu_cat = pill_idx;
-                desk.start_menu_scroll = 0;
-                desk.search_query.clear();
-                return;
-            }
-        }
+        // 3c. Windows 11 Start Menu interactions
+        let sm_w = 640usize;
+        let sm_h = 720usize;
+        let sm_x = (scr_w / 2).saturating_sub(sm_w / 2);
+        let sm_y = (scr_h / 2).saturating_sub(sm_h / 2);
 
-        // 3d. Pagination controls [< Ant | Prox >] at bottom of left column list (above search box)
-        let list_items = collect_start_menu_apps(desk);
-        let page_size = 9usize;
-        if cy >= sm_y + 420 && cy <= sm_y + 446 && cx >= 14 && cx <= 250 {
-            if cx < 130 {
-                desk.start_menu_scroll = desk.start_menu_scroll.saturating_sub(page_size);
-            } else if desk.start_menu_scroll + page_size < list_items.len() {
-                desk.start_menu_scroll += page_size;
-            }
+        // 3c1. Search box click
+        let search_x = sm_x + SPACE_M;
+        let search_y = sm_y + SPACE_M;
+        let search_w = sm_w - 2 * SPACE_M;
+        let search_h = 40;
+        if cx >= search_x && cx <= search_x + search_w && cy >= search_y && cy <= search_y + search_h {
+            // Focus search - typing will go to search_query
+            desk.start_menu_scroll = 0;
             return;
         }
 
-        // 3e. Click on any visible app item in the left column (9 rows x 40px)
-        if cx >= 14 && cx <= 250 && cy >= sm_y + 44 && cy < sm_y + 44 + page_size * 40 {
-            let row = (cy - (sm_y + 44)) / 40;
-            let abs_idx = desk.start_menu_scroll + row;
-            if abs_idx < list_items.len() {
-                let target_id = list_items[abs_idx];
-                desk.open_window(target_id);
-                if target_id == AppId::FileExplorer {
-                    do_refresh_vfs = true;
-                }
+        // 3c2. Pinned apps grid (5 columns x 2 rows)
+        let pinned_y = sm_y + SPACE_M + search_h + SPACE_M + 22;
+        let pin_col_w = 100usize;
+        let pin_col_h = 100usize;
+        let pin_gap = 12usize;
+        let pinned_apps: [AppId; 10] = [
+            AppId::FileExplorer, AppId::Terminal, AppId::WebBrowser,
+            AppId::ControlPanel, AppId::AppStore, AppId::Calculator,
+            AppId::Notepad, AppId::PaintStudio, AppId::TaskManager, AppId::SystemInfo,
+        ];
+        for (idx, &app_id) in pinned_apps.iter().enumerate() {
+            let col = idx % 5;
+            let row = idx / 5;
+            let px = sm_x + SPACE_M + col * (pin_col_w + pin_gap);
+            let py = pinned_y + row * (pin_col_h + pin_gap);
+            if py + pin_col_h > sm_y + sm_h - SPACE_M { break; }
+            if cx >= px && cx <= px + pin_col_w && cy >= py && cy <= py + pin_col_h {
+                desk.open_window(app_id);
+                if app_id == AppId::FileExplorer { do_refresh_vfs = true; }
+                desk.start_menu_open = false;
                 drop(desk_lock);
                 if do_refresh_vfs { refresh_vfs_cache(); }
                 return;
             }
         }
 
-        // 3f. Search bar magnifying glass click (left side of search box: x = 20..48, y = sm_y + 458..488)
-        if cy >= sm_y + 458 && cy <= sm_y + 488 && cx >= 20 && cx <= 48 {
-            desk.open_window(AppId::GlobalSearch);
+        // 3c3. Category pills c1-c7
+        let all_apps_y = pinned_y + 2 * (pin_col_h + pin_gap) + SPACE_M;
+        let cat_pill_y = all_apps_y + 24;
+        let cat_labels = ["Todos", "c1 Arquivos", "c2 Admin", "c3 Exec", "c4 Rede", "c5 Office", "c6 Media", "c7 Jogos"];
+        for (ci, _clabel) in cat_labels.iter().enumerate() {
+            let cpx = sm_x + SPACE_M + ci * 92;
+            let cpy = cat_pill_y;
+            let cpw = 84;
+            let cph = 30;
+            if cpx + cpw > sm_x + sm_w - SPACE_M { break; }
+            if cx >= cpx && cx <= cpx + cpw && cy >= cpy && cy <= cpy + cph {
+                desk.start_menu_cat = ci;
+                desk.start_menu_scroll = 0;
+                desk.search_query.clear();
+                return;
+            }
+        }
+
+        // 3c4. Category app list clicks
+        let cat_list_y = cat_pill_y + 30 + SPACE_M;
+        let list_items = collect_start_menu_apps(desk);
+        let page_size = 7usize;
+        let start_idx = desk.start_menu_scroll.min(list_items.len());
+        let visible_end = (start_idx + page_size).min(list_items.len());
+        for (row, &app_id) in list_items[start_idx..visible_end].iter().enumerate() {
+            let iy = cat_list_y + row * 44;
+            if iy + 36 > cat_list_y + 200 { break; } // approximate list height
+            if cx >= sm_x + SPACE_M && cx <= sm_x + sm_w - SPACE_M && cy >= iy && cy <= iy + 36 {
+                desk.open_window(app_id);
+                if app_id == AppId::FileExplorer { do_refresh_vfs = true; }
+                desk.start_menu_open = false;
+                drop(desk_lock);
+                if do_refresh_vfs { refresh_vfs_cache(); }
+                return;
+            }
+        }
+
+        // 3c5. Pagination controls for category list
+        if list_items.len() > page_size {
+            let pag_y = cat_list_y + 200 + 4; // approximate
+            if cy >= pag_y && cy <= pag_y + 22 {
+                if cx >= sm_x + SPACE_M && cx <= sm_x + SPACE_M + 100 {
+                    desk.start_menu_scroll = desk.start_menu_scroll.saturating_sub(page_size);
+                    return;
+                }
+                if cx >= sm_x + sm_w - SPACE_M - 100 && cx <= sm_x + sm_w - SPACE_M {
+                    if start_idx + page_size < list_items.len() {
+                        desk.start_menu_scroll += page_size;
+                    }
+                    return;
+                }
+            }
+        }
+
+        // 3c6. Recommended apps
+        let rec_y = sm_y + sm_h - 120;
+        let rec_w = 120usize;
+        let rec_h = 70usize;
+        let rec_apps: [AppId; 4] = [AppId::Terminal, AppId::FileExplorer, AppId::SystemInfo, AppId::ControlPanel];
+        for (ri, &app_id) in rec_apps.iter().enumerate() {
+            let rx = sm_x + SPACE_M + ri * (rec_w + 12);
+            let ry = rec_y + 22;
+            if rx + rec_w > sm_x + sm_w - SPACE_M { break; }
+            if cx >= rx && cx <= rx + rec_w && cy >= ry && cy <= ry + rec_h {
+                desk.open_window(app_id);
+                if app_id == AppId::FileExplorer { do_refresh_vfs = true; }
+                desk.start_menu_open = false;
+                drop(desk_lock);
+                if do_refresh_vfs { refresh_vfs_cache(); }
+                return;
+            }
+        }
+
+        // 3c7. Power button
+        let pwr_x = sm_x + sm_w - SPACE_M - 100;
+        let pwr_y = sm_y + sm_h - SPACE_M - 44;
+        let pwr_w = 96;
+        let pwr_h = 36;
+        if cx >= pwr_x && cx <= pwr_x + pwr_w && cy >= pwr_y && cy <= pwr_y + pwr_h {
+            desk.confirm_modal.title = String::from("Desligar o HybridOS?");
+            desk.confirm_modal.message = String::from("Tem certeza que deseja desligar o computador?");
+            desk.confirm_modal.show();
+            desk.confirm_modal.focus_yes = true;
             return;
         }
 
@@ -1566,10 +1665,29 @@ pub fn redraw_full_desktop(current_input: &str, prompt: &str) {
         let peek_hover = mx >= (scr_w.saturating_sub(15)) as i32 && my >= (scr_h.saturating_sub(40)) as i32;
         draw_vitrified_superbar(fb, pitch, scr_w, scr_h, 40, peek_hover);
 
-        // 5. Crystal Sphere Emblem (44px) on left corner
-        draw_crystal_sphere_emblem(fb, pitch, scr_w, scr_h, 28, scr_h - 22, desk.start_menu_open);
+        // 5. Windows 11 Style Start Button (left corner)
+        let start_btn_x = 12;
+        let start_btn_y = scr_h - 34;
+        let start_btn_w = 56;
+        let start_btn_h = 26;
+        let start_hover = mx >= start_btn_x as i32 && mx <= (start_btn_x + start_btn_w) as i32
+            && my >= start_btn_y as i32 && my <= (start_btn_y + start_btn_h) as i32;
+        let start_bg = if desk.start_menu_open {
+            ACCENT_PRIMARY
+        } else if start_hover {
+            ACCENT_HOVER
+        } else {
+            BG_SURFACE
+        };
+        fill_rounded_rect(fb, pitch, scr_w, scr_h, start_btn_x, start_btn_y, start_btn_w, start_btn_h, BORDER_RADIUS_M, start_bg);
+        draw_rounded_rect_border(fb, pitch, scr_w, scr_h, start_btn_x, start_btn_y, start_btn_w, start_btn_h, BORDER_RADIUS_M, BORDER_FOCUSED);
+        draw_text_clipped(fb, pitch, scr_w, scr_h, start_btn_x + 16, start_btn_y + 3, start_btn_x + start_btn_w - 4, "Iniciar", TEXT_PRIMARY, None);
+        draw_text_clipped(fb, pitch, scr_w, scr_h, start_btn_x + 6, start_btn_y + 6, start_btn_x + 12, "🪟", if start_hover { TEXT_PRIMARY } else { TEXT_SECONDARY }, None);
 
-        // 6. Superbar Open Window Task Tabs (up to 7 simultaneously)
+        // 6. Crystal Sphere Emblem (44px) on left corner (moved right of Start button)
+        draw_crystal_sphere_emblem(fb, pitch, scr_w, scr_h, 82, scr_h - 22, desk.start_menu_open);
+
+        // 7. Superbar Open Window Task Tabs (up to 7 simultaneously)
         let mut slot = 0usize;
         for w in desk.windows.iter() {
             if !w.open || slot >= 7 {
@@ -1616,66 +1734,176 @@ pub fn redraw_full_desktop(current_input: &str, prompt: &str) {
         draw_text_px(fb, pitch, scr_w, scr_h, tray_x + 95, tray_y, "[HDA]", theme.accent_color, None);
         draw_text_px(fb, pitch, scr_w, scr_h, tray_x + 150, tray_y, &clock_str, 0x00F8FAFC, None);
 
-        // 8. Start Menu (Dual-Panel Asymmetric with All 50 Programs & 7 Categories)
+        // 8. Windows 11 Style Start Menu
         if desk.start_menu_open {
-            let sm_y = scr_h - 540;
-            draw_asymmetric_start_menu(fb, pitch, scr_w, scr_h, 8, sm_y, &desk.search_query);
+            let sm_w = 640usize;
+            let sm_h = 720usize;
+            let sm_x = (scr_w / 2).saturating_sub(sm_w / 2);
+            let sm_y = (scr_h / 2).saturating_sub(sm_h / 2);
 
-            // Category Pills across top of left column: [Top, C1..C7]
-            let pill_labels = ["Top", "C1", "C2", "C3", "C4", "C5", "C6", "C7"];
-            for (pi, pl) in pill_labels.iter().enumerate() {
-                let px = 14 + pi * 29;
-                let py = sm_y + 12;
-                let active = desk.start_menu_cat == pi && desk.search_query.is_empty();
-                let pbg = if active { 0x000284C7 } else { 0x00E2E8F0 };
-                let pfg = if active { 0x00FFFFFF } else { 0x000F172A };
-                fill_rounded_rect(fb, pitch, scr_w, scr_h, px, py, 27, 22, 4, pbg);
-                draw_text_clipped(fb, pitch, scr_w, scr_h, px + 3, py + 3, px + 26, pl, pfg, None);
+            // Soft drop shadow
+            draw_soft_drop_shadow(fb, pitch, scr_w, scr_h, sm_x, sm_y, sm_w, sm_h, 10, 16, 6, 100);
+
+            // Main menu background (Mica / Acrylic effect)
+            fill_rounded_rect(fb, pitch, scr_w, scr_h, sm_x, sm_y, sm_w, sm_h, BORDER_RADIUS_L, BG_SURFACE);
+            draw_rounded_rect_border(fb, pitch, scr_w, scr_h, sm_x, sm_y, sm_w, sm_h, BORDER_RADIUS_L, BORDER_SUBTLE);
+
+            // Header: Search box at top
+            let search_x = sm_x + SPACE_M;
+            let search_y = sm_y + SPACE_M;
+            let search_w = sm_w - 2 * SPACE_M;
+            let search_h = 40;
+            fill_rounded_rect(fb, pitch, scr_w, scr_h, search_x, search_y, search_w, search_h, BORDER_RADIUS_M, 0x001E293B);
+            draw_rounded_rect_border(fb, pitch, scr_w, scr_h, search_x, search_y, search_w, search_h, BORDER_RADIUS_M, BORDER_FOCUSED);
+            // Search icon
+            draw_text_clipped(fb, pitch, scr_w, scr_h, search_x + 12, search_y + 10, search_x + 24, "🔍", TEXT_MUTED, None);
+            // Search text or placeholder
+            if desk.search_query.is_empty() {
+                draw_text_clipped(fb, pitch, scr_w, scr_h, search_x + 28, search_y + 10, search_x + search_w - 12, "Pesquisar programas, arquivos e configurações", TEXT_MUTED, None);
+            } else {
+                let mut q = desk.search_query.clone();
+                q.push('_');
+                draw_text_clipped(fb, pitch, scr_w, scr_h, search_x + 28, search_y + 10, search_x + search_w - 12, &q, TEXT_PRIMARY, None);
             }
 
-            // Visible program items in left column (9 rows x 40px)
-            let list_items = collect_start_menu_apps(desk);
-            let page_size = 9usize;
-            let start_idx = desk.start_menu_scroll.min(list_items.len());
-            for (row, &app_id) in list_items[start_idx..].iter().take(page_size).enumerate() {
-                let iy = sm_y + 44 + row * 40;
-                let hovered = mx >= 14 && mx <= 250 && my >= iy as i32 && my < (iy + 38) as i32;
+            // Section divider
+            let section_y = sm_y + SPACE_M + search_h + SPACE_M;
+
+            // Pinned Apps section header
+            draw_text_clipped(fb, pitch, scr_w, scr_h, sm_x + SPACE_M, section_y, sm_x + sm_w - SPACE_M, "Fixados", TEXT_SECONDARY, None);
+            let pinned_y = section_y + 22;
+
+            // Pinned apps grid (5 columns x 2 rows = 10 pinned apps)
+            let pinned_apps: [AppId; 10] = [
+                AppId::FileExplorer,
+                AppId::Terminal,
+                AppId::WebBrowser,
+                AppId::ControlPanel,
+                AppId::AppStore,
+                AppId::Calculator,
+                AppId::Notepad,
+                AppId::PaintStudio,
+                AppId::TaskManager,
+                AppId::SystemInfo,
+            ];
+
+            let pin_col_w = 100usize;
+            let pin_col_h = 100usize;
+            let pin_gap = 12usize;
+            for (idx, &app_id) in pinned_apps.iter().enumerate() {
+                let col = idx % 5;
+                let row = idx / 5;
+                let px = sm_x + SPACE_M + col * (pin_col_w + pin_gap);
+                let py = pinned_y + row * (pin_col_h + pin_gap);
+                if py + pin_col_h > sm_y + sm_h - SPACE_M { break; }
+
+                let hovered = mx >= px as i32 && mx <= (px + pin_col_w) as i32 && my >= py as i32 && my <= (py + pin_col_h) as i32;
                 if hovered {
-                    fill_rounded_rect(fb, pitch, scr_w, scr_h, 14, iy, 236, 36, 4, 0x00E0F2FE);
+                    fill_rounded_rect(fb, pitch, scr_w, scr_h, px, py, pin_col_w, pin_col_h, BORDER_RADIUS_M, ACCENT_HOVER);
+                } else {
+                    fill_rounded_rect(fb, pitch, scr_w, scr_h, px, py, pin_col_w, pin_col_h, BORDER_RADIUS_M, 0x001E293B);
+                }
+                draw_rounded_rect_border(fb, pitch, scr_w, scr_h, px, py, pin_col_w, pin_col_h, BORDER_RADIUS_M, if hovered { BORDER_FOCUSED } else { BORDER_SUBTLE });
+
+                if let Some(meta) = ALL_APPS.iter().find(|m| m.id == app_id) {
+                    // App icon placeholder (colored circle with first letter)
+                    let icon_cx = px + pin_col_w / 2;
+                    let icon_cy = py + 28;
+                    fill_rounded_rect(fb, pitch, scr_w, scr_h, icon_cx - 16, icon_cy - 16, 32, 32, 8, theme.accent_color);
+                    let initial = meta.title.chars().next().unwrap_or('A');
+                    draw_text_clipped(fb, pitch, scr_w, scr_h, icon_cx - 4, icon_cy - 4, icon_cx + 4, &initial.to_string(), TEXT_PRIMARY, None);
+
+                    // App name
+                    let name = meta.title;
+                    let name_trunc = if name.len() > 18 { &name[..18] } else { name };
+                    let name_w = name_trunc.len() * 8;
+                    draw_text_clipped(fb, pitch, scr_w, scr_h, px + (pin_col_w.saturating_sub(name_w)) / 2, py + 52, px + pin_col_w, name_trunc, if hovered { TEXT_PRIMARY } else { TEXT_SECONDARY }, None);
+                }
+            }
+
+            // All Apps section (categories c1-c7)
+            let all_apps_y = pinned_y + 2 * (pin_col_h + pin_gap) + SPACE_M;
+            draw_text_clipped(fb, pitch, scr_w, scr_h, sm_x + SPACE_M, all_apps_y, sm_x + sm_w - SPACE_M, "Todos os Aplicativos", TEXT_SECONDARY, None);
+
+            // Category pills c1-c7
+            let cat_pill_y = all_apps_y + 24;
+            let cph = 30;
+            let cat_labels = ["Todos", "c1 Arquivos", "c2 Admin", "c3 Exec", "c4 Rede", "c5 Office", "c6 Media", "c7 Jogos"];
+            for (ci, clabel) in cat_labels.iter().enumerate() {
+                let cpx = sm_x + SPACE_M + ci * 92;
+                let cpy = cat_pill_y;
+                let cpw = 84;
+                let cat_active = desk.start_menu_cat == ci;
+                if cpx + cpw > sm_x + sm_w - SPACE_M { break; }
+                let cbg = if cat_active { ACCENT_PRIMARY } else { 0x001E293B };
+                let cfg = if cat_active { TEXT_PRIMARY } else { TEXT_SECONDARY };
+                fill_rounded_rect(fb, pitch, scr_w, scr_h, cpx, cpy, cpw, cph, BORDER_RADIUS_M, cbg);
+                draw_rounded_rect_border(fb, pitch, scr_w, scr_h, cpx, cpy, cpw, cph, BORDER_RADIUS_M, if cat_active { BORDER_FOCUSED } else { BORDER_SUBTLE });
+                draw_text_clipped(fb, pitch, scr_w, scr_h, cpx + 6, cpy + 6, cpx + cpw - 6, clabel, cfg, None);
+            }
+
+            // Category app list (scrollable)
+            let cat_list_y = cat_pill_y + cph + SPACE_M;
+            let cat_list_h = sm_y + sm_h - SPACE_M - 60 - cat_list_y; // reserve space for power button
+            let list_items = collect_start_menu_apps(desk);
+            let page_size = 7usize;
+            let start_idx = desk.start_menu_scroll.min(list_items.len());
+            let visible_end = (start_idx + page_size).min(list_items.len());
+
+            for (row, &app_id) in list_items[start_idx..visible_end].iter().enumerate() {
+                let iy = cat_list_y + row * 44;
+                if iy + 36 > cat_list_y + cat_list_h { break; }
+                let hovered = mx >= (sm_x + SPACE_M) as i32 && mx <= (sm_x + sm_w - SPACE_M) as i32 && my >= iy as i32 && my <= (iy + 36) as i32;
+                if hovered {
+                    fill_rounded_rect(fb, pitch, scr_w, scr_h, sm_x + SPACE_M, iy, sm_w - 2 * SPACE_M, 36, BORDER_RADIUS_M, ACCENT_HOVER);
                 }
                 if let Some(meta) = ALL_APPS.iter().find(|m| m.id == app_id) {
-                    let label = format!("{:02}. {}", meta.id.as_u8(), meta.title);
-                    draw_text_clipped(fb, pitch, scr_w, scr_h, 20, iy + 10, 246, &label, 0x000F172A, None);
+                    let num_str = format!("{:02}", meta.id.as_u8());
+                    draw_text_clipped(fb, pitch, scr_w, scr_h, sm_x + SPACE_M + 8, iy + 8, sm_x + SPACE_M + 24, &num_str, TEXT_MUTED, None);
+                    draw_text_clipped(fb, pitch, scr_w, scr_h, sm_x + SPACE_M + 30, iy + 8, sm_x + sm_w - SPACE_M - 8, meta.title, if hovered { TEXT_PRIMARY } else { TEXT_SECONDARY }, None);
                 }
             }
 
-            // Pagination Bar [< Anterior | Proximo >]
-            fill_rounded_rect(fb, pitch, scr_w, scr_h, 14, sm_y + 420, 112, 24, 4, 0x00E2E8F0);
-            draw_text_px(fb, pitch, scr_w, scr_h, 24, sm_y + 424, "< Anterior", 0x000F172A, None);
-            fill_rounded_rect(fb, pitch, scr_w, scr_h, 134, sm_y + 420, 116, 24, 4, 0x00E2E8F0);
-            draw_text_px(fb, pitch, scr_w, scr_h, 148, sm_y + 424, "Proximo >", 0x000F172A, None);
-
-            // Right-column shortcuts (every item mapped to a real native app)
-            let shortcuts = [
-                "Pasta Pessoal",
-                "Documentos",
-                "Imagens",
-                "Musicas",
-                "Jogos",
-                "Computador",
-                "Painel Controle",
-                "Dispositivos",
-                "Ajuda & Restore",
-            ];
-            for (idx, sc) in shortcuts.iter().enumerate() {
-                let sy = sm_y + 84 + idx * 34;
-                let hov = mx >= 260 && mx <= 424 && my >= sy as i32 && my <= (sy + 30) as i32;
-                if hov {
-                    fill_rounded_rect(fb, pitch, scr_w, scr_h, 260, sy, 162, 28, 4, theme.frame_active_color);
-                }
-                draw_text_clipped(fb, pitch, scr_w, scr_h, 268, sy + 6, 420, sc, 0x00E2E8F0, None);
+            // Pagination for category list
+            if list_items.len() > page_size {
+                let pag_y = cat_list_y + cat_list_h + 4;
+                fill_rounded_rect(fb, pitch, scr_w, scr_h, sm_x + SPACE_M, pag_y, 100, 22, BORDER_RADIUS_M, 0x001E293B);
+                draw_text_clipped(fb, pitch, scr_w, scr_h, sm_x + SPACE_M + 6, pag_y + 4, sm_x + SPACE_M + 96, "< Anterior", TEXT_SECONDARY, None);
+                fill_rounded_rect(fb, pitch, scr_w, scr_h, sm_x + sm_w - SPACE_M - 100, pag_y, 100, 22, BORDER_RADIUS_M, 0x001E293B);
+                draw_text_clipped(fb, pitch, scr_w, scr_h, sm_x + sm_w - SPACE_M - 94, pag_y + 4, sm_x + sm_w - SPACE_M - 6, "Próximo >", TEXT_SECONDARY, None);
             }
-            draw_text_px(fb, pitch, scr_w, scr_h, 8 + 250 + 28, sm_y + 500 - 34, "Desligar", 0x00FFFFFF, None);
+
+            // Recommended section (bottom left)
+            let rec_y = sm_y + sm_h - 120;
+            draw_text_clipped(fb, pitch, scr_w, scr_h, sm_x + SPACE_M, rec_y, sm_x + sm_w - SPACE_M, "Recomendados", TEXT_SECONDARY, None);
+            let rec_apps: [AppId; 4] = [AppId::Terminal, AppId::FileExplorer, AppId::SystemInfo, AppId::ControlPanel];
+            let rec_w = 120usize;
+            let rec_h = 70usize;
+            for (ri, &app_id) in rec_apps.iter().enumerate() {
+                let rx = sm_x + SPACE_M + ri * (rec_w + 12);
+                let ry = rec_y + 22;
+                if rx + rec_w > sm_x + sm_w - SPACE_M { break; }
+                let hovered = mx >= rx as i32 && mx <= (rx + rec_w) as i32 && my >= ry as i32 && my <= (ry + rec_h) as i32;
+                if hovered {
+                    fill_rounded_rect(fb, pitch, scr_w, scr_h, rx, ry, rec_w, rec_h, BORDER_RADIUS_M, ACCENT_HOVER);
+                } else {
+                    fill_rounded_rect(fb, pitch, scr_w, scr_h, rx, ry, rec_w, rec_h, BORDER_RADIUS_M, 0x001E293B);
+                }
+                draw_rounded_rect_border(fb, pitch, scr_w, scr_h, rx, ry, rec_w, rec_h, BORDER_RADIUS_M, if hovered { BORDER_FOCUSED } else { BORDER_SUBTLE });
+                if let Some(meta) = ALL_APPS.iter().find(|m| m.id == app_id) {
+                    draw_text_clipped(fb, pitch, scr_w, scr_h, rx + 8, ry + 8, rx + rec_w - 8, meta.title, if hovered { TEXT_PRIMARY } else { TEXT_SECONDARY }, None);
+                }
+            }
+
+            // Power button (bottom right)
+            let pwr_x = sm_x + sm_w - SPACE_M - 100;
+            let pwr_y = sm_y + sm_h - SPACE_M - 44;
+            let pwr_w = 96;
+            let pwr_h = 36;
+            let pwr_hover = mx >= pwr_x as i32 && mx <= (pwr_x + pwr_w) as i32 && my >= pwr_y as i32 && my <= (pwr_y + pwr_h) as i32;
+            fill_rounded_rect(fb, pitch, scr_w, scr_h, pwr_x, pwr_y, pwr_w, pwr_h, BORDER_RADIUS_M, if pwr_hover { ERROR_COLOR } else { 0x001E293B });
+            draw_rounded_rect_border(fb, pitch, scr_w, scr_h, pwr_x, pwr_y, pwr_w, pwr_h, BORDER_RADIUS_M, BORDER_SUBTLE);
+            draw_text_clipped(fb, pitch, scr_w, scr_h, pwr_x + 12, pwr_y + 8, pwr_x + pwr_w - 12, "Desligar", TEXT_PRIMARY, None);
         }
 
         // 9. Tooltip flutuante (botões ícones, controles)
