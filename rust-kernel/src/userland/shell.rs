@@ -81,8 +81,9 @@ impl fmt::Display for ShellError {
             Self::DownloadError(err) => write!(f, "download error: {}", err),
         }
     }
+}
 
-    impl std::error::Error for ShellError {}
+impl std::error::Error for ShellError {}
 
 impl From<VfsError> for ShellError {
     fn from(err: VfsError) -> Self {
@@ -1391,30 +1392,36 @@ impl HybridShell {
     /// Command `download`: Baixa um arquivo de uma URL via HTTP e salva no VFS.
     pub fn cmd_download(&mut self, url: &str, dest_path: &str) -> Result<String, ShellError> {
         use crate::net::smoltcp_bridge::perform_curl;
+        use smoltcp::wire::Ipv4Address;
+        use core::str::FromStr;
 
+        let mut out = String::new();
         crate::serial_println!("[DOWNLOAD] Downloading: {}", url);
         out.push_str(&format!("[DOWNLOAD] URL: {}\n", url));
         out.push_str(&format!("[DOWNLOAD] Destino: {}\n", dest_path));
 
         // Parse da URL para extrair host, porta e caminho
         let url_str = url.to_string();
-        let (host, port, path) = parse_url(&url_str)?;
+        let (host, port, path) = Self::parse_url(&url_str)?;
 
         crate::serial_println!("[DOWNLOAD] Connecting to {}:{}...", host, port);
 
+        // Resolve host string to IPv4 address
+        let host_ip = Ipv4Address::from_str(&host)
+            .map_err(|_| ShellError::DownloadError(format!("Invalid host address: {}", host)))?;
+
         // Baixa o conteúdo via HTTP GET
-        let content = perform_curl(&host, port, &path)
+        let content = perform_curl(host_ip, port, &path)
             .map_err(|e| ShellError::DownloadError(format!("Failed to download: {}", e)))?;
 
         crate::serial_println!("[DOWNLOAD] Downloaded {} bytes", content.len());
 
         // Salva no VFS
-        vfs::vfs_create_file(dest_path, content.as_bytes())
+        vfs::vfs_create_file(dest_path, content.as_bytes(), Permissions::default_file())
             .map_err(|e| ShellError::DownloadError(format!("Failed to save to VFS: {:?}", e)))?;
 
         crate::serial_println!("[DOWNLOAD] Saved successfully em: {}", dest_path);
 
-        let mut out = String::new();
         out.push_str("================================================================================\n");
         out.push_str("                      HYBRIDOS DOWNLOAD MANAGER                            \n");
         out.push_str("================================================================================\n");
