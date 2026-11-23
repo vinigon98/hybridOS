@@ -1,0 +1,23 @@
+[workspace]
+members = [
+    "compositor",
+    "apps/desktop/libhyb-ui",
+    "apps/desktop/libhyb-cfg",
+    "apps/desktop/hyb-shell",
+    "apps/desktop/hyb-files",
+    "apps/desktop/hyb-edit",
+    "apps/desktop/hyb-calc",
+    "apps/desktop/hyb-capture",
+    "apps/desktop/hyb-clip",
+    "apps/desktop/hyb-chars",
+    "apps/desktop/hyb-fonts",
+    "apps/desktop/hyb-paint",
+    "apps/desktop/hyb-rdp",
+    "apps/desktop/hyb-vault",
+    "apps/desktop/hyb-cert-user",
+    "apps/desktop/hyb-cert-sys",
+    "apps/desktop/hyb-focus",
+    "apps/desktop/hyb-pdf",
+    "apps/desktop/hyb-zoom",
+]
+resolver = "2"

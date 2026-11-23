@@ -24,6 +24,7 @@ pub mod apps_cat4_net;
 pub mod apps_cat6_media;
 pub mod apps_cat7_extra;
 pub mod ui_widgets;
+pub mod ux_design_system;
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
@@ -77,6 +78,29 @@ impl KeyboardRingBuffer {
 static KEYBOARD_BUFFER: crate::sync::SpinLock<KeyboardRingBuffer> =
     crate::sync::SpinLock::new(KeyboardRingBuffer::new());
 static SHIFT_PRESSED: AtomicBool = AtomicBool::new(false);
+static ALT_PRESSED: AtomicBool = AtomicBool::new(false);
+static CTRL_PRESSED: AtomicBool = AtomicBool::new(false);
+static WIN_PRESSED: AtomicBool = AtomicBool::new(false);
+
+/// Returns true if Alt modifier is currently held.
+pub fn is_alt_pressed() -> bool { ALT_PRESSED.load(Ordering::SeqCst) }
+/// Returns true if Ctrl modifier is currently held.
+pub fn is_ctrl_pressed() -> bool { CTRL_PRESSED.load(Ordering::SeqCst) }
+/// Returns true if Win modifier is currently held.
+pub fn is_win_pressed() -> bool { WIN_PRESSED.load(Ordering::SeqCst) }
+
+/// Último scancode pressionado (para detecção de hotkeys no loop de UI).
+static mut LAST_SCANCODE: Option<u8> = None;
+
+/// Armazena um scancode para ser lido pelo loop de UI.
+pub fn set_last_scancode(code: u8) {
+    unsafe { LAST_SCANCODE = Some(code); }
+}
+
+/// Lê e consome o último scancode armazenado.
+pub fn take_last_scancode() -> Option<u8> {
+    unsafe { LAST_SCANCODE.take() }
+}
 
 /// Enqueues an ASCII character from the PS/2 keyboard IRQ handler (O(1), zero allocation).
 pub fn enqueue_keyboard_char(c: char) {
@@ -125,6 +149,7 @@ pub fn poll_ps2_controller() -> bool {
 
 /// Handles keyboard scancode received from port 0x60 on IRQ 1.
 pub fn handle_keyboard_irq(scancode: u8) {
+    set_last_scancode(scancode);
     match scancode {
         0x2A | 0x36 => {
             SHIFT_PRESSED.store(true, Ordering::SeqCst);
@@ -134,6 +159,12 @@ pub fn handle_keyboard_irq(scancode: u8) {
             SHIFT_PRESSED.store(false, Ordering::SeqCst);
             return;
         }
+        0x38 => { ALT_PRESSED.store(true, Ordering::SeqCst); return; }        // LAlt press
+        0xB8 => { ALT_PRESSED.store(false, Ordering::SeqCst); return; }       // LAlt release
+        0x1D => { CTRL_PRESSED.store(true, Ordering::SeqCst); return; }       // LCtrl press
+        0x9D => { CTRL_PRESSED.store(false, Ordering::SeqCst); return; }      // LCtrl release
+        0x5B => { WIN_PRESSED.store(true, Ordering::SeqCst); return; }        // LWin press
+        0xDB => { WIN_PRESSED.store(false, Ordering::SeqCst); return; }       // LWin release
         _ => {}
     }
 

@@ -1,0 +1,12 @@
+[package]
+name = "libhyb-ui"
+version = "0.1.0"
+edition = "2021"
+authors = ["HybridOS Core Team"]
+description = "HybridOS Fluent & DRM/Wayland Native UI Toolkit"
+
+[dependencies]
+libhyb-cfg = { path = "../libhyb-cfg" }
+
+[dev-dependencies]
+hyb-files = { path = "../hyb-files" }

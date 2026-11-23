@@ -1,0 +1,163 @@
+================================================================
+  _   _       _          _     _  ____   ____            _ 
+ | | | |_   _| |__  _ __(_) __| |/ ___| |  _ \ _   _ ___| |_ 
+ | |_| | | | | '_ \| '__| |/ _` |\___ \ | |_) | | | / __| __|
+ |  _  | |_| | |_) | |  | | (_| | ___) ||  _ <| |_| \__ \ |_ 
+ |_| |_|\__, |_.__/|_|  |_|\__,_||____/ |_| \_\\__,_|___/\__|
+        |___/        Proprietary Hybrid Kernel (Bare Metal)
+================================================================
+
+[BOOT] CPU running in 64-bit Long Mode in Ring 0.
+[BOOT] Limine Bootloader Protocol revision 3: Handshake OK.
+
+>>> [PHASE 1] Initializing x86_64 Architecture Core (GDT, TSS, IDT)...
+================================================================
+ [ARCH] Initializing HybridOS x86_64 Hardware Core Subsystem...
+================================================================
+[ARCH] Serial COM1 (port 0x3F8) initialized @ 115200 baud, 8N1.
+[ARCH] TSS initialized (IST1 Double Fault emergency stack configured @ 0xFFFFFFFF8063E180).
+[ARCH] GDT loaded into CPU (LGDT):
+       - Index 1: 0x08 -> Kernel Code 64 (Ring 0)
+       - Index 2: 0x10 -> Kernel Data 64 (Ring 0)
+       - Index 3: 0x1B -> User Data 64   (Ring 3)
+       - Index 4: 0x23 -> User Code 64   (Ring 3)
+       - Index 5: 0x28 -> Task State Segment (TSS)
+[PERCPU] Core #0 online: GS_BASE=0xFFFFFFFF8063FA80, syscall_rsp0=0xFFFFFFFF80643AB0
+[ARCH] IDT loaded into CPU (LIDT) with 256 vectors:
+       - Exception Vectors (#DE, #DB, #NMI, #BP, #UD, #DF, #GP, #PF)
+       - Hardware IRQ0 Timer (PIT 100Hz) & IRQ1 Keyboard online
+       - Windows NT Fast Syscall Trap Gate (INT 0x2E, DPL 3)
+       - Linux POSIX Syscall Trap Gate (INT 0x80, DPL 3)
+[ARCH] x86_64 Architecture initialization complete.
+
+[Arch Core] Hardware status: Serial Ready=true, GDT Loaded=true, IDT Loaded=true, TSS Configured=true
+
+>>> [PHASE 2] Initializing Memory Management Subsystem (PML4, Frame Allocator, Kernel Heap)...
+[BOOT] Usable physical RAM: base=0x0000000000100000, size=2036 MB (2135375872 bytes)
+[MM] ================================================================
+[MM] Initializing HybridOS Bare-Metal MMU Subsystem (x86_64 Long Mode)...
+[MM] Limine HHDM Base Offset: 0xFFFF800000000000
+[MM] Physical Frame Allocator online:
+     - Hardware RAM Detected: 2036 MB (2135519232 bytes)
+     - Allocator Bitmap Limit: 16384 MB (4194304 frames)
+     - Usable Free RAM:        2036 MB (521335 frames)
+[MM] Allocated new physical Root PML4 frame at: 0x0000000000100000
+[MM] Higher-Half direct mappings copied from initial bootloader CR3.
+[MM] Identity mapped lower 16MB (0x00000000 - 0x01000000).
+[MM] Kernel Heap mapped at VA 0xFFFF900000000000 (16 MB, 4096 physical pages).
+[MM] >>> CR3 HARDWARE SWITCH COMPLETE (Active PML4: 0x0000000000100000) & CR0.WP ENABLED! <<<
+[MM] Kernel Dynamic Heap Allocator online at virtual address 0xFFFF900000000000 (16384 KB).
+[MM] Memory Management Subsystem successfully online with 100% real hardware paging!
+[MM] ================================================================
+[MM] Subsystem active: 2036 MB physical RAM, 16384 KB heap.
+
+>>> [PHASE 2.1] Discovering ACPI Platform & Booting SMP Cores...
+[ACPI ERROR] Platform initialization failed: ACPI: Failed to locate RSDP in UEFI or BIOS memory
+
+>>> [PHASE 3] Programming x86_64 Hardware MSRs for Dual Syscall Dispatch...
+[MSR] Hardware Registers programmed:
+      - IA32_STAR   (0xC0000081): 0x0013000800000000
+      - IA32_LSTAR  (0xC0000082): 0xFFFFFFFF800A9648
+      - IA32_SFMASK (0xC0000084): 0x0000000000000700
+      - IA32_EFER   (0xC0000080): 0x0000000000000D01
+
+>>> [PHASE 4] Scanning PCI Bus via Port I/O (0xCF8 / 0xCFC)...
+[PCI] Found Device @ 00:00.0 -> Vendor: 0x8086, Device: 0x29C0, Class: 0x06:00
+[PCI] Found Device @ 00:01.0 -> Vendor: 0x1234, Device: 0x1111, Class: 0x03:00
+[PCI] Found Device @ 00:02.0 -> Vendor: 0x8086, Device: 0x2922, Class: 0x01:06
+[PCI] Found Device @ 00:03.0 -> Vendor: 0x1B36, Device: 0x0010, Class: 0x01:08
+[PCI] Found Device @ 00:04.0 -> Vendor: 0x1AF4, Device: 0x1000, Class: 0x02:00
+[PCI] Found Device @ 00:1F.0 -> Vendor: 0x8086, Device: 0x2918, Class: 0x06:01
+[PCI] PCI Bus scan complete. Discovered 6 hardware device(s).
+[NET] E1000 NIC probe: Intel 82540EM (E1000) not found on PCI bus
+
+>>> [PHASE 5] Initializing UEFI GOP Framebuffer & Console...
+[GOP] Video Framebuffer detected: 1280x800 (pitch: 5120 bytes)
+[GOP CONSOLE] Framebuffer Text Console online (1280x800 pixels, 160x50 chars).
+
+>>> [PHASE 5.1] Initializing Vortex Driver Model (VDM)...
+[VDM Core] Vortex Driver Model initialized.
+
+>>> [PHASE 6] Initializing Dual-ABI Syscall Router (Windows NT SSDT + Linux POSIX)...
+[Syscall Core] Dual-ABI Router online: 450+ Windows NT SSDT services + 335+ Linux POSIX syscalls.
+
+>>> [PHASE 7] Initializing Storage (ATA PIO) & Virtual File System (VFS)...
+[FAT32 ERROR] Mount failed: ATA device timed out waiting for BSY to clear
+[VFS] Virtual File System initialized successfully with root RamFS & Dual-Personality Path Resolver.
+[STORAGE] ATA Primary Master not responding or not present.
+[VFS] Unified namespace mounted: / (Linux) and C:\ (Windows NT).
+
+>>> [PHASE 8] Initializing Preemptive Scheduler & Process Manager...
+[Scheduler] Hybrid multi-priority scheduler active.
+[Personality] Windows NT personality active: Windows NT x64 (PE32+ / SSDT)
+[Personality] Linux POSIX personality active: Linux POSIX (ELF64 / SysV)
+
+>>> [PHASE 9] Validating Real-Time Bilingual VFS Resolution...
+[VFS BILINGUAL OK] Successfully resolved 'C:\Users\Public\readme.txt' -> Length: 143 bytes
+                   Content: HybridOS Bilingual VFS: Unified Inode accessible simultaneously via Windows (C:\Users\Public\readme.txt) and Linux (/Users/Public/readme.txt)!
+[VFS BILINGUAL OK] Successfully resolved '/Users/Public/readme.txt' -> Length: 143 bytes
+                   Content: HybridOS Bilingual VFS: Unified Inode accessible simultaneously via Windows (C:\Users\Public\readme.txt) and Linux (/Users/Public/readme.txt)!
+[VFS BILINGUAL OK] Successfully resolved '/mnt/c/Users/Public/readme.txt' -> Length: 143 bytes
+                   Content: HybridOS Bilingual VFS: Unified Inode accessible simultaneously via Windows (C:\Users\Public\readme.txt) and Linux (/Users/Public/readme.txt)!
+[VFS BILINGUAL OK] Successfully resolved '\??\C:\Users\Public\readme.txt' -> Length: 143 bytes
+                   Content: HybridOS Bilingual VFS: Unified Inode accessible simultaneously via Windows (C:\Users\Public\readme.txt) and Linux (/Users/Public/readme.txt)!
+
+>>> [PHASE 10] Executing Authentic User-Mode Binaries in Ring 3...
+[ELF LOADER] Successfully spawned Linux process 'hello_linux.elf' (PID 1): Entry=0x0000000000400078, CR3=0x0000000001136000, RSP=0x00007FFFFFFEFF80
+[PE LOADER] Successfully spawned Windows NT process 'hello_win.exe' (PID 2): Entry=0x0000000140001000, CR3=0x000000000114E000, TEB=0x000000007FFE1000
+[RING 3 PREEMPTIVE CONCURRENCY] Booting dual-personality runqueue:
+  - Task 1: 'hello_linux.elf' (PID 1, CR3=0x0000000001136000, Entry=0x0000000000400078, Stack=0x00007FFFFFFEFF80)
+  - Task 2: 'hello_win.exe'   (PID 2, CR3=0x000000000114E000, Entry=0x0000000140001000, TEB=0x000000007FFE1000)
+[Linux POSIX PID 1] Step 1/3 in Ring 3 -> Yielding CPU...
+[Scheduler] Preemptive Context Switch: PID 1 (Linux POSIX) -> PID 2 (Windows NT) [CR3=0x000000000114E000, TEB=0x000000007FFE1000]
+      [MSR CONFIG] Before swapgs: GS_BASE=0xFFFFFFFF8063FA80, KERNEL_GS_BASE=0x000000007FFE1000
+[Windows NT PID 2] Step 1/3 in Ring 3 (TEB PID=2 Verified) -> Yielding...
+[Scheduler] Preemptive Context Switch: PID 2 (Windows NT) -> PID 1 (Linux POSIX) [CR3=0x0000000001136000]
+[Linux POSIX PID 1] Step 2/3 in Ring 3 -> Yielding CPU...
+[Scheduler] Preemptive Context Switch: PID 1 (Linux POSIX) -> PID 2 (Windows NT) [CR3=0x000000000114E000, TEB=0x000000007FFE1000]
+      [MSR CONFIG] Before swapgs: GS_BASE=0xFFFFFFFF8063FA80, KERNEL_GS_BASE=0x000000007FFE1000
+[Windows NT PID 2] Step 2/3 in Ring 3 (TEB PID=2 Verified) -> Yielding...
+[Scheduler] Preemptive Context Switch: PID 2 (Windows NT) -> PID 1 (Linux POSIX) [CR3=0x0000000001136000]
+[Linux POSIX PID 1] Step 3/3 in Ring 3 -> Completed execution OK!
+[Scheduler] Preemptive Context Switch: PID 1 terminated -> Switching to active PID 2 (Windows NT) [CR3=0x000000000114E000]
+      [MSR CONFIG] Before swapgs: GS_BASE=0xFFFFFFFF8063FA80, KERNEL_GS_BASE=0x000000007FFE1000
+[Windows NT PID 2] Step 3/3 in Ring 3 (TEB PID=2 Verified) -> Completed OK!
+>>> [RING 3 PROOF COMPLETE] Both Linux ELF64 and Windows PE64 executed concurrently with preemptive multitasking in Ring 3!
+
+[PE-VFS] Falha ao ler '/Program Files/hello.exe' do VFS
+[PE-VFS] Falha ao ler '/Downloads/hello.exe' do VFS
+[PE-VFS] Falha ao ler '/hello.exe' do VFS
+
+================================================================
+  [HybridOS Kernel] Bare-Metal Ring 0 Initialization Complete!   
+  Zero Simulation - Real x86_64 Long Mode, PML4 Paging & Hardware Port I/O
+================================================================
+
+[MOUSE] IntelliMouse PS/2 detected! ID=0x03 (4-byte packet, wheel active)
+
+>>> RUNNING DETERMINISTIC HYBRIDOS PHASES A, B & C SELF-TESTS <<<
+[TEST_OK] GFX_CRYSTAL_GLASS_SHADER
+[TEST_OK] GFX_WINDOW_MANAGER_DYNAMIC
+[TEST_OK] GFX_SUPERBAR_AND_TRAY
+[TEST_OK] GFX_START_MENU_RENDER
+[TEST_OK] APP_EXPLORER_REAL_VFS
+[TEST_OK] APP_TASKMGR_TELEMETRY
+[TEST_OK] APP_CONTROL_PANEL_REAL
+[TEST_OK] APP_UTILITIES_SUITE
+[TEST_OK] APP_STORE_AND_INSTALLER
+[TEST_OK] TRISHELL_UNIFIED_PIPELINE
+[TEST_OK] WIN32K_GRAPHICAL_SUBSYSTEM
+[TEST_OK] TIER0_APPS_CAT_1
+[TEST_OK] TIER0_APPS_CAT_2
+[TEST_OK] TIER0_APPS_CAT_3
+[TEST_OK] TIER0_APPS_CAT_4
+[TEST_OK] TIER0_APPS_CAT_5
+[TEST_OK] TIER0_APPS_CAT_6
+[TEST_OK] TIER0_APPS_CAT_7
+[TEST_OK] ALL_50_TIER0_APPS_INTERACTIVE
+>>> ALL HYBRIDOS AUTONOMOUS LOOP PHASES A, B, C & D (50 APPS) PASSED DETERMINISTICALLY! <<<
+
+[GUI] HybridOS Desktop Environment & PS/2 Mouse active.
+[Shell] HybridShell interactive session started.
+[BOOT_STAGE_OK]
+hybridos[ring0]:/# 

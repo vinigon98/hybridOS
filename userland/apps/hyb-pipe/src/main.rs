@@ -1,98 +1,15 @@
-//! hyb-pipe: HybridOS Clipboard Redirect Utility (Ring 3 ELF64)
-//!
-//! Sends any command output to the clipboard (command | hyb-pipe) or
-//! pastes current clipboard contents to stdout (hyb-pipe -o).
-
-#![no_std]
-#![no_main]
-
-use core::panic::PanicInfo;
-use libhybrid_sys::allocator::HybridUserAllocator;
-use libhybrid_sys::linux::*;
-use libhybrid_sys::{print, println};
-
-#[global_allocator]
-static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("[hyb-pipe CRASH] panicked: {:?}", info);
-    sys_exit(1);
+#![no_std] #![no_main]
+use libhybrid_sys::linux::{sys_read, sys_write, sys_exit, sys_open, sys_close, STDIN_FILENO, STDOUT_FILENO};
+fn put(s: &str) { let _ = sys_write(STDOUT_FILENO, s.as_bytes()); }
+fn putln(s: &str) { put(s); put("\r\n"); }
+fn put_u64(v: u64) { if v == 0 { put("0"); return; } let mut tmp = [0u8; 20]; let mut n = v; let mut pos = 0; while n > 0 { tmp[pos] = b'0' + (n % 10) as u8; n /= 10; pos += 1; } while pos > 0 { pos -= 1; put(core::str::from_utf8(&[tmp[pos]]).unwrap_or("")); } }
+const O_WRONLY_CREAT_TRUNC: u32 = 0x01 | 0x40 | 0x200; const MODE: u32 = 0o644;
+fn run() {
+    put("HybridOS hyb-pipe v0.1 - Utilitario de Redirecionamento para Clipboard\r\n");
+    put("redirecionando a entrada padrao para o clipboard (arquivo de transferencia)...\r\n");
+    let clipboard: &[u8] = b"/sdcard/clipboard"; let dfd = sys_open(core::str::from_utf8(clipboard).unwrap_or("/sdcard/clipboard"), O_WRONLY_CREAT_TRUNC, MODE);
+    if dfd < 0 { put("nao foi possivel abrir clipboard (rc="); put_u64(dfd as u64); putln("); escrevendo na saida padrao"); let mut buf = [0u8; 4096]; let mut total: u64 = 0; loop { let n = sys_read(STDIN_FILENO, &mut buf); if n <= 0 { break; } let _ = sys_write(STDOUT_FILENO, &buf[..n as usize]); total += n as u64; } put("total: "); put_u64(total); putln(" bytes"); return; }
+    let mut total: u64 = 0; let mut buf = [0u8; 4096]; loop { let n = sys_read(STDIN_FILENO, &mut buf); if n <= 0 { break; } let _ = sys_write(dfd as usize, &buf[..n as usize]); total += n as u64; }
+    let _ = sys_close(dfd as usize); put("clipboard gravado: "); put_u64(total); putln(" bytes"); putln("hyb-pipe: redirecionamento concluido.");
 }
-
-const MAX_CLIP_LEN: usize = 256;
-
-struct Clipboard {
-    content: [u8; MAX_CLIP_LEN],
-    len: usize,
-    owner: [u8; 32],
-    owner_len: usize,
-}
-
-struct Pipe {
-    clip: Clipboard,
-}
-
-impl Pipe {
-    const fn new() -> Self {
-        Self { clip: Clipboard { content: [0u8; MAX_CLIP_LEN], len: 0, owner: [0u8; 32], owner_len: 0 } }
-    }
-
-    fn write_clipboard(&mut self, data: &str, owner: &str) {
-        let b = data.as_bytes();
-        let n = b.len().min(MAX_CLIP_LEN - 1);
-        self.clip.content[..n].copy_from_slice(&b[..n]);
-        self.clip.len = n;
-        let ob = owner.as_bytes();
-        let ol = ob.len().min(31);
-        self.clip.owner[..ol].copy_from_slice(&ob[..ol]);
-        self.clip.owner_len = ol;
-        println!("[hyb-pipe] content copied to the clipboard (from '{}').", owner);
-        println!("[hyb-pipe] {} byte(s) stored.", n);
-    }
-
-    fn read_clipboard(&self) {
-        if self.clip.len == 0 {
-            println!("[hyb-pipe] clipboard is empty.");
-            return;
-        }
-        let ob = core::str::from_utf8(&self.clip.owner[..self.clip.owner_len]).unwrap_or("");
-        println!("[hyb-pipe] pasting clipboard content (origin: '{}'):", ob);
-        let s = core::str::from_utf8(&self.clip.content[..self.clip.len]).unwrap_or("");
-        println!("{}", s);
-    }
-
-    fn clear(&mut self) {
-        self.clip.len = 0;
-        self.clip.owner_len = 0;
-        println!("[hyb-pipe] clipboard cleared.");
-    }
-}
-
-fn run() -> i32 {
-    println!("============================================================");
-    println!("   hyb-pipe — HybridOS Clipboard Redirect Utility");
-    println!("============================================================");
-
-    let mut pipe = Pipe::new();
-
-    let data = "  PID  TTY          TIME CMD\n    1  tty0     00:00:01 kernel_init\n    3  tty0     00:00:00 hyb-sh.elf";
-    pipe.write_clipboard(data, "ps");
-    println!();
-
-    pipe.read_clipboard();
-    println!();
-
-    pipe.clear();
-    pipe.read_clipboard();
-    println!();
-
-    println!("[hyb-pipe] clipboard redirect validated.");
-    sys_sched_yield();
-    0
-}
-
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    sys_exit(run());
-}
+#[no_mangle] pub extern "C" fn _start() -> ! { run(); sys_exit(0); }

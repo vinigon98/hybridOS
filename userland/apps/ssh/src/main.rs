@@ -1,111 +1,27 @@
-//! ssh: HybridOS Native OpenSSH Client (Ring 3 ELF64)
-//!
-//! Integrated into the base system with connection multiplexing and host
-//! hopping (ProxyJump).
-
-#![no_std]
-#![no_main]
-
-use core::panic::PanicInfo;
-use libhybrid_sys::allocator::HybridUserAllocator;
-use libhybrid_sys::linux::*;
-use libhybrid_sys::{print, println};
-
-#[global_allocator]
-static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("[ssh CRASH] panicked: {:?}", info);
-    sys_exit(1);
+#![no_std] #![no_main]
+use libhybrid_sys::linux::{sys_write, sys_exit, STDOUT_FILENO};
+use libhybrid_sys::net::{sys_socket, sys_connect, sys_sendto, sys_recvfrom, SockAddrIn, AF_INET, SOCK_STREAM};
+fn put(s: &str) { let _ = sys_write(STDOUT_FILENO, s.as_bytes()); }
+fn putln(s: &str) { put(s); put("\r\n"); }
+fn put_u64(v: u64) { if v == 0 { put("0"); return; } let mut tmp = [0u8; 20]; let mut n = v; let mut pos = 0; while n > 0 { tmp[pos] = b'0' + (n % 10) as u8; n /= 10; pos += 1; } while pos > 0 { pos -= 1; put(core::str::from_utf8(&[tmp[pos]]).unwrap_or("")); } }
+fn run() {
+    put("HybridOS ssh v0.1 - Cliente OpenSSH Nativo\r\n");
+    put("conectando a 127.0.0.1:22 ...\r\n");
+    let sock = sys_socket(AF_INET, SOCK_STREAM, 0);
+    if sock < 0 { put("falha ao criar socket (rc="); put_u64(sock as u64); putln(")"); return; }
+    put("socket criado: fd="); put_u64(sock as u64); put("\r\n");
+    let addr = SockAddrIn::new([127, 0, 0, 1], 22);
+    let rc = sys_connect(sock as usize, &addr);
+    if rc < 0 { put("falha ao conectar (rc="); put_u64(rc as u64); putln(")"); return; }
+    putln("conectado ao servidor SSH.");
+    let banner: &[u8] = b"SSH-2.0-HybridOS_0.1\r\n";
+    let sent = sys_sendto(sock as usize, banner, 0, core::ptr::null());
+    if sent < 0 { put("falha ao enviar banner (rc="); put_u64(sent as u64); putln(")"); return; }
+    put("banner SSH enviado: "); put_u64(sent as u64); put(" bytes\r\n");
+    let mut buf = [0u8; 256];
+    let rc = sys_recvfrom(sock as usize, &mut buf, 0, core::ptr::null_mut(), core::ptr::null_mut());
+    if rc < 0 { put("falha ao receber resposta (rc="); put_u64(rc as u64); putln(")"); }
+    else { putln("resposta do servidor:"); let _ = sys_write(STDOUT_FILENO, &buf[..rc as usize]); put("\r\n"); }
+    putln("hyb-ssh: sessao SSH encerrada.");
 }
-
-const MAX_HOSTS: usize = 8;
-const MAX_HOST_LEN: usize = 64;
-
-#[derive(Copy, Clone)]
-struct HostEntry {
-    host: [u8; MAX_HOST_LEN],
-    host_len: usize,
-    port: u16,
-    user: [u8; MAX_HOST_LEN],
-    user_len: usize,
-}
-
-struct SshClient {
-    known_hosts: [HostEntry; MAX_HOSTS],
-    host_count: usize,
-    multiplexed: bool,
-}
-
-impl SshClient {
-    const fn new() -> Self {
-        Self { known_hosts: [HostEntry { host: [0u8; MAX_HOST_LEN], host_len: 0, port: 22, user: [0u8; MAX_HOST_LEN], user_len: 0 }; MAX_HOSTS], host_count: 0, multiplexed: false }
-    }
-
-    fn add_host(&mut self, host: &str, port: u16, user: &str) {
-        if self.host_count >= MAX_HOSTS { return; }
-        let hb = host.as_bytes();
-        let hl = hb.len().min(MAX_HOST_LEN - 1);
-        self.known_hosts[self.host_count].host[..hl].copy_from_slice(&hb[..hl]);
-        self.known_hosts[self.host_count].host_len = hl;
-        self.known_hosts[self.host_count].port = port;
-        let ub = user.as_bytes();
-        let ul = ub.len().min(MAX_HOST_LEN - 1);
-        self.known_hosts[self.host_count].user[..ul].copy_from_slice(&ub[..ul]);
-        self.known_hosts[self.host_count].user_len = ul;
-        self.host_count += 1;
-    }
-
-    fn connect(&self, host: &str) {
-        let mut found = false;
-        for i in 0..self.host_count {
-            let h = core::str::from_utf8(&self.known_hosts[i].host[..self.known_hosts[i].host_len]).unwrap_or("");
-            if h == host {
-                let u = core::str::from_utf8(&self.known_hosts[i].user[..self.known_hosts[i].user_len]).unwrap_or("");
-                println!("[ssh] connecting {}@{}:{} (native OpenSSH, TLS 1.3)", u, host, self.known_hosts[i].port);
-                println!("[ssh] authentication via SSH key / biometrics: OK");
-                if self.multiplexed { println!("[ssh] connection multiplexed reusing existing channel."); }
-                println!("[ssh] session opened on '{}'.", host);
-                found = true;
-                break;
-            }
-        }
-        if !found {
-            println!("[ssh] connecting {}:22 ... (host not cataloged, adding to known_hosts)", host);
-            println!("[ssh] authentication: OK");
-            println!("[ssh] session opened on '{}'.", host);
-        }
-    }
-
-    fn proxy_jump(&self, target: &str, via: &str) {
-        println!("[ssh] ProxyJump: {} -> {} -> {}", via, via, target);
-        println!("[ssh] host hop established with end-to-end encryption.");
-    }
-}
-
-fn run() -> i32 {
-    println!("============================================================");
-    println!("   ssh — HybridOS Native OpenSSH Client");
-    println!("============================================================");
-
-    let mut ssh = SshClient::new();
-    ssh.add_host("server.hybridos.local", 22, "admin");
-    ssh.add_host("git.hybridos.local", 22, "git");
-    ssh.multiplexed = true;
-
-    ssh.connect("server.hybridos.local");
-    println!();
-    ssh.proxy_jump("internal.hybridos.local", "bastion.hybridos.local");
-    println!();
-    ssh.connect("nova-maquina.local");
-    println!();
-    println!("[ssh] connection multiplexing and ProxyJump validated.");
-    sys_sched_yield();
-    0
-}
-
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    sys_exit(run());
-}
+#[no_mangle] pub extern "C" fn _start() -> ! { run(); sys_exit(0); }

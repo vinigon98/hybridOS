@@ -1,0 +1,10 @@
+[package]
+name = "hyb-zoom"
+version = "0.1.0"
+edition = "2021"
+authors = ["HybridOS Core Team"]
+description = "HybridOS Compositor Magnifier & OKLCH/HEX Color Picker"
+
+[dependencies]
+libhyb-ui = { path = "../libhyb-ui" }
+libhyb-cfg = { path = "../libhyb-cfg" }

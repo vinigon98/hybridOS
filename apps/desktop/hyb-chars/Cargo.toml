@@ -1,0 +1,10 @@
+[package]
+name = "hyb-chars"
+version = "0.1.0"
+edition = "2021"
+authors = ["HybridOS Core Team"]
+description = "HybridOS Embedded Unicode Inspector & Technical Symbols Catalog"
+
+[dependencies]
+libhyb-ui = { path = "../libhyb-ui" }
+libhyb-cfg = { path = "../libhyb-cfg" }

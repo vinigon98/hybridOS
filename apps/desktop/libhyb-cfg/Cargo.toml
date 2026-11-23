@@ -1,0 +1,8 @@
+[package]
+name = "libhyb-cfg"
+version = "0.1.0"
+edition = "2021"
+authors = ["HybridOS Core Team"]
+description = "HybridOS Unified Declarative Configuration & IPC Sync Library"
+
+[dependencies]

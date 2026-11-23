@@ -1,0 +1,10 @@
+[package]
+name = "hyb-calc"
+version = "0.1.0"
+edition = "2021"
+authors = ["HybridOS Core Team"]
+description = "HybridOS Technical & Bitwise Programmer Calculator"
+
+[dependencies]
+libhyb-ui = { path = "../libhyb-ui" }
+libhyb-cfg = { path = "../libhyb-cfg" }

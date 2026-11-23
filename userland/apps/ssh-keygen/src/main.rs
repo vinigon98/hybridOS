@@ -1,296 +1,36 @@
-//! ssh-keygen: Gerador Criptogr�fico de Chaves (Ring 3 ELF64)
-//!
-//! Gera��o de chaves Ed25519, RSA e suporte nativo a chaves de hardware
-//! FIDO2/YubiKey.
-
-#![no_std]
-#![no_main]
-
-use core::panic::PanicInfo;
-use libhybrid_sys::allocator::HybridUserAllocator;
-use libhybrid_sys::linux::*;
-use libhybrid_sys::{print, println};
-
-#[global_allocator]
-static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("[ssh-keygen CRASH] panicked: {:?}", info);
-    sys_exit(1);
+#![no_std] #![no_main]
+use libhybrid_sys::linux::{sys_write, sys_exit, sys_getpid, sys_sysinfo, STDOUT_FILENO};
+use libhybrid_sys::linux::SysInfo;
+fn put(s: &str) { let _ = sys_write(STDOUT_FILENO, s.as_bytes()); }
+fn putln(s: &str) { put(s); put("\r\n"); }
+fn put_u64(v: u64) { if v == 0 { put("0"); return; } let mut tmp = [0u8; 20]; let mut n = v; let mut pos = 0; while n > 0 { tmp[pos] = b'0' + (n % 10) as u8; n /= 10; pos += 1; } while pos > 0 { pos -= 1; put(core::str::from_utf8(&[tmp[pos]]).unwrap_or("")); } }
+fn put_hex_byte(v: u8, out: &mut [u8], pos: &mut usize) { const HEX: &[u8; 16] = b"0123456789abcdef"; out[*pos] = HEX[(v >> 4) as usize]; *pos += 1; out[*pos] = HEX[(v & 0x0f) as usize]; *pos += 1; }
+struct XorShift64 { state: u64 }
+impl XorShift64 {
+    fn seed(seed: u64) -> Self { let mut s = if seed == 0 { 0x9E3779B97F4A7C15 } else { seed }; s = s.wrapping_add(0x9E3779B97F4A7C15); Self { state: s } }
+    fn next(&mut self) -> u64 { let mut x = self.state; x ^= x << 13; x ^= x >> 7; x ^= x << 17; self.state = x; x }
 }
-
-const MAX_KEYS: usize = 8;
-const MAX_COMMENT_LEN: usize = 64;
-
-#[derive(Copy, Clone)]
-struct KeyPair {
-    algorithm: [u8; 16],
-    algorithm_len: usize,
-    bits: u32,
-    comment: [u8; MAX_COMMENT_LEN],
-    comment_len: usize,
-    hardware_backed: bool,
+fn run() {
+    put("HybridOS ssh-keygen v0.1 - Gerador Criptografico de Chaves\r\n");
+    put("Gerando par de chaves ed25519 (simulado) ...\r\n");
+    let mut info = SysInfo::default();
+    let _rc = sys_sysinfo(&mut info);
+    let entropy = (sys_getpid() as u64)
+        .wrapping_add(info.uptime_ticks)
+        .wrapping_add(info.total_mem_bytes)
+        .wrapping_add(info.context_switches);
+    let mut rng = XorShift64::seed(entropy);
+    let mut privkey = [0u8; 32];
+    for i in 0..4 { let w = rng.next(); privkey[i * 4] = (w >> 24) as u8; privkey[i * 4 + 1] = (w >> 16) as u8; privkey[i * 4 + 2] = (w >> 8) as u8; privkey[i * 4 + 3] = w as u8; }
+    let mut pubkey = [0u8; 32];
+    let mut acc: u64 = 0xCBF29CE484222325;
+    for i in 0..32 { acc = acc.wrapping_mul(0x100000001B3).wrapping_add(privkey[i] as u64); pubkey[i] = (acc >> 24) as u8; }
+    put("entropia usada: "); put_u64(entropy); put("\r\n");
+    let mut hex = [0u8; 64]; let mut pos = 0;
+    for i in 0..32 { put_hex_byte(pubkey[i], &mut hex, &mut pos); }
+    put("chave publica: ssh-ed25519 ");
+    let _ = sys_write(STDOUT_FILENO, &hex[..64]); put("\r\n");
+    put("arquivos gravados (conceito): id_ed25519, id_ed25519.pub\r\n");
+    putln("ssh-keygen: par de chaves gerado com sucesso.");
 }
-
-struct KeyGenerator {
-    keys: [KeyPair; MAX_KEYS],
-    count: usize,
-}
-
-impl KeyGenerator {
-    const fn new() -> Self {
-        Self {
-            keys: [KeyPair { algorithm: [0u8; 16], algorithm_len: 0, bits: 0, comment: [0u8; MAX_COMMENT_LEN], comment_len: 0, hardware_backed: false }; MAX_KEYS],
-            count: 0,
-        }
-    }
-
-    fn generate(&mut self, algorithm: &str, bits: u32, comment: &str, hardware_backed: bool) {
-        if self.count >= MAX_KEYS {
-            println!("[ssh-keygen] l`//! ssh-keygen: Gerador Criptogr�fico de Chaves (Ring 3 ELF64)
-//!
-//! Gera��o de chaves Ed25519, RSA e suporte nativo a chaves de hardware
-//! FIDO2/YubiKey.
-
-#![no_std]
-#![no_main]
-
-use core::panic::PanicInfo;
-use libhybrid_sys::allocator::HybridUserAllocator;
-use libhybrid_sys::linux::*;
-use libhybrid_sys::{print, println};
-
-#[global_allocator]
-static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("[ssh-keygen CRASH] panicked: {:?}", info);
-    sys_exit(1);
-}
-
-const MAX_KEYS: usize = 8;
-const MAX_COMMENT_LEN: usize = 64;
-
-#[derive(Copy, Clone)]
-struct KeyPair {
-    algorithm: [u8; 16],
-    algorithm_len: usize,
-    bits: u32,
-    comment: [u8; MAX_COMMENT_LEN],
-    comment_len: usize,
-    hardware_backed: bool,
-}
-
-struct KeyGenerator {
-    keys: [KeyPair; MAX_KEYS],
-    count: usize,
-}
-
-impl KeyGenerator {
-    const fn new() -> Self {
-        Self {
-            keys: [KeyPair { algorithm: [0u8; 16], algorithm_len: 0, bits: 0, comment: [0u8; MAX_COMMENT_LEN], comment_len: 0, hardware_backed: false }; MAX_KEYS],
-            count: 0,
-        }
-    }
-
-    fn generate(&mut self, algorithm: &str, bits: u32, comment: &str, hardware_backed: bool) {
-        if self.count >= MAX_KEYS {
-            println!("[ssh-keygen] lu{ed}mite de chaves atingido.");
-            return;
-        }
-        let ab = algorithm.as_bytes();
-        let al = ab.len().min(15);
-        self.keys[self.count].algorithm[..al].copy_from_slice(&ab[..al]);
-        self.keys[self.count].algorithm_len = al;
-        self.keys[self.count].bits = bits;
-        let cb = comment.as_bytes();
-        let cl = cb.len().min(MAX_COMMENT_LEN - 1);
-        self.keys[self.count].comment[..cl].copy_from_slice(&cb[..cl]);
-        self.keys[self.count].comment_len = cl;
-        self.keys[self.count].hardware_backed = hardware_backed;
-        self.count += 1;
-        println!("[ssh-keygen] gerando par de chaves {} ({} bits)...", algorithm, bits);
-        if hardware_backed {
-            println!("[ssh-keygen] chave de hardware FIDO2/YubiKey detectada.");
-        }
-        println!("[ssh-keygen] chave privada salva em ~/.ssh/id_{}", algorithm);
-        println!("[ssh-keygen] chave p`//! ssh-keygen: Gerador Criptogr�fico de Chaves (Ring 3 ELF64)
-//!
-//! Gera��o de chaves Ed25519, RSA e suporte nativo a chaves de hardware
-//! FIDO2/YubiKey.
-
-#![no_std]
-#![no_main]
-
-use core::panic::PanicInfo;
-use libhybrid_sys::allocator::HybridUserAllocator;
-use libhybrid_sys::linux::*;
-use libhybrid_sys::{print, println};
-
-#[global_allocator]
-static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("[ssh-keygen CRASH] panicked: {:?}", info);
-    sys_exit(1);
-}
-
-const MAX_KEYS: usize = 8;
-const MAX_COMMENT_LEN: usize = 64;
-
-#[derive(Copy, Clone)]
-struct KeyPair {
-    algorithm: [u8; 16],
-    algorithm_len: usize,
-    bits: u32,
-    comment: [u8; MAX_COMMENT_LEN],
-    comment_len: usize,
-    hardware_backed: bool,
-}
-
-struct KeyGenerator {
-    keys: [KeyPair; MAX_KEYS],
-    count: usize,
-}
-
-impl KeyGenerator {
-    const fn new() -> Self {
-        Self {
-            keys: [KeyPair { algorithm: [0u8; 16], algorithm_len: 0, bits: 0, comment: [0u8; MAX_COMMENT_LEN], comment_len: 0, hardware_backed: false }; MAX_KEYS],
-            count: 0,
-        }
-    }
-
-    fn generate(&mut self, algorithm: &str, bits: u32, comment: &str, hardware_backed: bool) {
-        if self.count >= MAX_KEYS {
-            println!("[ssh-keygen] l\u00edmite de chaves atingido.");
-            return;
-        }
-        let ab = algorithm.as_bytes();
-        let al = ab.len().min(15);
-        self.keys[self.count].algorithm[..al].copy_from_slice(&ab[..al]);
-        self.keys[self.count].algorithm_len = al;
-        self.keys[self.count].bits = bits;
-        let cb = comment.as_bytes();
-        let cl = cb.len().min(MAX_COMMENT_LEN - 1);
-        self.keys[self.count].comment[..cl].copy_from_slice(&cb[..cl]);
-        self.keys[self.count].comment_len = cl;
-        self.keys[self.count].hardware_backed = hardware_backed;
-        self.count += 1;
-        println!("[ssh-keygen] gerando par de chaves {} ({} bits)...", algorithm, bits);
-        if hardware_backed {
-            println!("[ssh-keygen] chave de hardware FIDO2/YubiKey detectada.");
-        }
-        println!("[ssh-keygen] chave privada salva em ~/.ssh/id_{}", algorithm);
-        println!("[ssh-keygen] chave pu{fa}blica salva em ~/.ssh/id_{}.pub", algorithm);
-        println!("[ssh-keygen] impress`//! ssh-keygen: Gerador Criptogr�fico de Chaves (Ring 3 ELF64)
-//!
-//! Gera��o de chaves Ed25519, RSA e suporte nativo a chaves de hardware
-//! FIDO2/YubiKey.
-
-#![no_std]
-#![no_main]
-
-use core::panic::PanicInfo;
-use libhybrid_sys::allocator::HybridUserAllocator;
-use libhybrid_sys::linux::*;
-use libhybrid_sys::{print, println};
-
-#[global_allocator]
-static ALLOCATOR: HybridUserAllocator = HybridUserAllocator::new();
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("[ssh-keygen CRASH] panicked: {:?}", info);
-    sys_exit(1);
-}
-
-const MAX_KEYS: usize = 8;
-const MAX_COMMENT_LEN: usize = 64;
-
-#[derive(Copy, Clone)]
-struct KeyPair {
-    algorithm: [u8; 16],
-    algorithm_len: usize,
-    bits: u32,
-    comment: [u8; MAX_COMMENT_LEN],
-    comment_len: usize,
-    hardware_backed: bool,
-}
-
-struct KeyGenerator {
-    keys: [KeyPair; MAX_KEYS],
-    count: usize,
-}
-
-impl KeyGenerator {
-    const fn new() -> Self {
-        Self {
-            keys: [KeyPair { algorithm: [0u8; 16], algorithm_len: 0, bits: 0, comment: [0u8; MAX_COMMENT_LEN], comment_len: 0, hardware_backed: false }; MAX_KEYS],
-            count: 0,
-        }
-    }
-
-    fn generate(&mut self, algorithm: &str, bits: u32, comment: &str, hardware_backed: bool) {
-        if self.count >= MAX_KEYS {
-            println!("[ssh-keygen] l\u00edmite de chaves atingido.");
-            return;
-        }
-        let ab = algorithm.as_bytes();
-        let al = ab.len().min(15);
-        self.keys[self.count].algorithm[..al].copy_from_slice(&ab[..al]);
-        self.keys[self.count].algorithm_len = al;
-        self.keys[self.count].bits = bits;
-        let cb = comment.as_bytes();
-        let cl = cb.len().min(MAX_COMMENT_LEN - 1);
-        self.keys[self.count].comment[..cl].copy_from_slice(&cb[..cl]);
-        self.keys[self.count].comment_len = cl;
-        self.keys[self.count].hardware_backed = hardware_backed;
-        self.count += 1;
-        println!("[ssh-keygen] gerando par de chaves {} ({} bits)...", algorithm, bits);
-        if hardware_backed {
-            println!("[ssh-keygen] chave de hardware FIDO2/YubiKey detectada.");
-        }
-        println!("[ssh-keygen] chave privada salva em ~/.ssh/id_{}", algorithm);
-        println!("[ssh-keygen] chave p\u00fablica salva em ~/.ssh/id_{}.pub", algorithm);
-        println!("[ssh-keygen] impressu{e3}o digital (fingerprint): SHA256:xx:xx:xx:xx ({})", comment);
-    }
-
-    fn list(&self) {
-        println!("[ssh-keygen] chaves geradas:");
-        if self.count == 0 {
-            println!("  (nenhuma)");
-        }
-        for i in 0..self.count {
-            let a = core::str::from_utf8(&self.keys[i].algorithm[..self.keys[i].algorithm_len]).unwrap_or("");
-            let c = core::str::from_utf8(&self.keys[i].comment[..self.keys[i].comment_len]).unwrap_or("");
-            println!("  {} {} bits hw={} comment={}", a, self.keys[i].bits, self.keys[i].hardware_backed, c);
-        }
-    }
-}
-
-fn run() -> i32 {
-    println!("============================================================");
-    println!("   ssh-keygen — HybridOS Cryptographic Key Generator");
-    println!("============================================================");
-
-    let mut gen = KeyGenerator::new();
-    gen.generate("ed25519", 256, "admin@hybridos", false);
-    gen.generate("rsa", 4096, "root@server", false);
-    gen.generate("ed25519", 256, "yubikey-user", true); // FIDO2
-    println!();
-    gen.list();
-    println!();
-    println!("[ssh-keygen] gera��o Ed25519/RSA e suporte FIDO2/YubiKey validados.");
-    sys_sched_yield();
-    0
-}
-
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    sys_exit(run());
-}
+#[no_mangle] pub extern "C" fn _start() -> ! { run(); sys_exit(0); }

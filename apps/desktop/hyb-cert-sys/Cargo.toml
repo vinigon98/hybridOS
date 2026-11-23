@@ -1,0 +1,10 @@
+[package]
+name = "hyb-cert-sys"
+version = "0.1.0"
+edition = "2021"
+authors = ["HybridOS Core Team"]
+description = "HybridOS System Root CA Trust Store & Localhost CA Generator"
+
+[dependencies]
+libhyb-ui = { path = "../libhyb-ui" }
+libhyb-cfg = { path = "../libhyb-cfg" }
